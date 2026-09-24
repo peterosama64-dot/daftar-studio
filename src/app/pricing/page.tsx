@@ -30,7 +30,7 @@ export default function Pricing() {
             <div className="flex items-center gap-2.5"><h2 className="text-2xl font-bold">{p.name}</h2>{p.hl && <Pill tone="later">الأنسب لو شغال مع عملاء كتير</Pill>}</div>
             <div className="flex items-baseline gap-2">{p.price === "قريباً" ? <span className="font-display text-3xl font-bold">قريباً</span> : <><span className="num text-4xl font-bold">{p.price}</span><span className="text-muted">ج.م / شهر</span></>}</div>
             <p className="text-ink2">{p.desc}</p>
-            <Link href="/app" className={btnClass(p.hl ? "primary" : "secondary")}>{p.hl ? "ابدأ مجاناً" : "ابدأ"}</Link>
+            <Link href="/signup" className={btnClass(p.hl ? "primary" : "secondary")}>{p.hl ? "ابدأ مجاناً" : "ابدأ"}</Link>
           </div>
         ))}
       </div>

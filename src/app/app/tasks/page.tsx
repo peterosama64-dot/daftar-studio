@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/auth";
 import { TaskCard } from "@/components/task-card";
 import { PageHead } from "@/components/month";
 import { Button, Empty, SectionHead, inputClass } from "@/components/ui";
@@ -9,9 +10,10 @@ import Link from "next/link";
 export const metadata = { title: "الشغل" };
 
 export default async function Tasks({ searchParams }: { searchParams: SP }) {
+  const uid = await requireUser();
   const sp = await searchParams;
   const month = await monthFrom(searchParams);
-  const { today, urgent, later, doneThisMonth } = await loadMonth(month);
+  const { today, urgent, later, doneThisMonth } = await loadMonth(month, uid);
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
   const src = typeof sp.src === "string" && sp.src in SOURCE_LABEL ? (sp.src as Source) : null;
   const show = (list: typeof urgent) => list.filter((t) => (!q || t.title.includes(q) || t.client.includes(q)) && (!src || t.source === src));

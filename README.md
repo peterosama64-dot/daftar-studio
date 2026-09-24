@@ -6,23 +6,36 @@ Next.js 15 (App Router) · TypeScript · Tailwind v4 · Prisma · Claude API. Ar
 
 ## التشغيل على جهازك
 
+محتاج PostgreSQL شغال على جهازك (أو قاعدة مجانية على Neon أو Supabase).
+
 ```bash
 npm install
-cp .env.example .env      # DATABASE_URL فيها SQLite جاهزة
-npx prisma db push        # يعمل قاعدة البيانات
-npm run dev               # http://localhost:3000
+cp .env.example .env      # حط رابط قاعدة البيانات و SESSION_SECRET
+npx prisma migrate dev    # يعمل الجداول
+npm run dev               # http://localhost:3000 ← اعمل حساب من /signup
 ```
 
 | متغير | لازم؟ | بيعمل إيه |
 |---|---|---|
-| `DATABASE_URL` | أيوه | SQLite محلياً (`file:./dev.db`). في الإنتاج: PostgreSQL. |
-| `ANTHROPIC_API_KEY` | لأ | «رتّبهالي» والتقرير المكتوب بـ Claude. من غيره بيشتغل ترتيب مبدئي بسيط من غير ذكاء. |
-| `APP_PASSWORD` | في الإنتاج أيوه | بيقفل `/app` و`/api` بكلمة سر لحد ما الحسابات تتعمل. |
+| `DATABASE_URL` | أيوه | رابط PostgreSQL. على Neon/Supabase استخدم الرابط الـ pooled. |
+| `DIRECT_URL` | أيوه | رابط مباشر لنفس القاعدة، بيستخدمه Prisma للـ migrations. |
+| `SESSION_SECRET` | في الإنتاج أيوه | بيوقّع كوكي الدخول. ٣٢ حرف عشوائي على الأقل: `openssl rand -base64 48`. |
+| `ANTHROPIC_API_KEY` | لأ | «رتّبهالي» والتقرير المكتوب بـ Claude. من غيره بيشتغل ترتيب مبدئي بسيط. |
 | `APP_TIMEZONE` | لأ | الافتراضي `Africa/Cairo`. بيحدد «النهارده» إيه. |
+
+## الرفع على Vercel
+
+1. اعمل قاعدة PostgreSQL (Neon أو Supabase) وخد الرابطين: pooled و direct.
+2. على vercel.com: New Project ← اختار الـ repo ده.
+3. في Environment Variables حط: `DATABASE_URL` و `DIRECT_URL` و `SESSION_SECRET` (و `ANTHROPIC_API_KEY` لو عايز Claude).
+4. Build Command سيبه زي ما هو: Vercel بيشغّل `vercel-build` لوحده، وده بيعمل `prisma migrate deploy` قبل الـ build.
+5. Deploy. وبعدها من Settings ← Domains ضيف الدومين بتاعك.
+
+⚠️ `prisma migrate deploy` بيطبّق الـ migrations الجديدة بس ومش بيمسح بيانات. ممنوع تشغّل `migrate dev` أو `migrate reset` على قاعدة الإنتاج: الاتنين ممكن يمسحوا البيانات.
 
 ## الأوامر
 
-- `npm test` — اختبارات المنطق: تصنيف المهام، حساب الفلوس، التواريخ، والترتيب المبدئي.
+- `npm test` — اختبارات المنطق: تصنيف المهام، حساب الفلوس، التواريخ، الترتيب المبدئي، وتوكنات الدخول.
 - `npx tsc --noEmit` — فحص الأنواع.
 - `npm run build` — نسخة الإنتاج.
 
@@ -32,7 +45,7 @@ npm run dev               # http://localhost:3000
 |---|---|
 | `/` | صفحة الهبوط |
 | `/pricing` | الأسعار |
-| `/login` | الدخول |
+| `/signup` · `/login` | حساب جديد والدخول |
 | `/app` | الرئيسية: فلوس الشهر، «قول أو اكتب»، المستعجل، الأسبوع ده |
 | `/app/tasks` | بورد الشغل: مستعجل / ليه لسه شوية / خلصته |
 | `/app/tasks/[id]` | تفاصيل مهمة: الحالة، المتفق عليه واللي اتدفع، ملاحظات |
@@ -44,8 +57,8 @@ npm run dev               # http://localhost:3000
 
 ## المراحل
 
-1. **✓ المرحلة ١ (دي):** كل الصفحات شغالة ببيانات حقيقية، التسجيل بالصوت، الترتيب بـ Claude، التقرير، كلمة سر للموقع.
-2. **المرحلة ٢:** حسابات لكل مستخدم (تسجيل دخول)، PostgreSQL، والرفع على Vercel بدومين.
+1. **✓ المرحلة ١:** كل الصفحات شغالة ببيانات حقيقية، التسجيل بالصوت، الترتيب بـ Claude، التقرير.
+2. **✓ المرحلة ٢:** حسابات لكل مستخدم، وكل واحد يشوف بياناته بس، PostgreSQL، وجاهز للرفع على Vercel.
 3. **المرحلة ٣:** ربط Gmail (OAuth) وقراءة إيصالات الاشتراكات.
 4. **المرحلة ٤:** تذكيرات بالمواعيد، وتصدير التقرير PDF.
 

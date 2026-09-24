@@ -1,16 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { SESSION_COOKIE, verifySession } from "@/lib/session";
 
-// Until real accounts land (next phase), APP_PASSWORD protects the app and API
-// with the browser's built-in password prompt. Unset = open (local dev only).
-export function middleware(req: NextRequest) {
-  const password = process.env.APP_PASSWORD;
-  if (!password) return NextResponse.next();
-  const header = req.headers.get("authorization") ?? "";
-  if (header.startsWith("Basic ")) {
-    const decoded = atob(header.slice(6));
-    if (decoded.slice(decoded.indexOf(":") + 1) === password) return NextResponse.next();
+// Fast gate: no valid session cookie → /login (pages) or 401 (API).
+// Pages and actions still re-check the user in the database (lib/auth.ts).
+export async function middleware(req: NextRequest) {
+  const uid = await verifySession(req.cookies.get(SESSION_COOKIE)?.value);
+  if (uid) return NextResponse.next();
+  if (req.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "سجّل دخول الأول." }, { status: 401 });
   }
-  return new NextResponse("محتاج كلمة السر", { status: 401, headers: { "WWW-Authenticate": 'Basic realm="daftar", charset="UTF-8"' } });
+  const url = new URL("/login", req.url);
+  url.searchParams.set("next", req.nextUrl.pathname);
+  return NextResponse.redirect(url);
 }
 
 export const config = { matcher: ["/app/:path*", "/api/:path*"] };

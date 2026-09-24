@@ -35,7 +35,7 @@ export default function Landing() {
           </h1>
           <p className="max-w-[46ch] text-[19px] text-ink2">سجّل مهامك ودخلك واشتراكاتك وانت ماشي. الدفتر بيطلّع الشغل من شات العملاء، وآخر الشهر يقولك خلصت إيه، والمستعجل إيه، وصافي ربحك كام.</p>
           <div className="flex flex-wrap items-center gap-4">
-            <Link href="/app" className={btnClass()}>افتح الدفتر ‹</Link>
+            <Link href="/signup" className={btnClass()}>افتح الدفتر ‹</Link>
             <span className="text-sm text-muted">شغال من الموبايل والكمبيوتر، وبالعربي المصري</span>
           </div>
         </div>
@@ -99,12 +99,12 @@ export default function Landing() {
 
       <section className="grid items-center gap-6 rounded-3xl bg-ink p-8 text-paper sm:grid-cols-[auto_1fr] lg:p-11">
         <svg viewBox="0 0 24 24" className="size-14 text-cyan" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2.5" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
-        <div><h2 className="mb-1.5 text-[clamp(24px,3vw,34px)] font-bold">دفترك ليك انت بس</h2><p className="max-w-[60ch] opacity-80">أرقامك ومهامك محفوظة على حسابك، ومحدش يشوفها غيرك.</p></div>
+        <div><h2 className="mb-1.5 text-[clamp(24px,3vw,34px)] font-bold">دفترك ليك انت بس</h2><p className="max-w-[60ch] opacity-80">أرقامك ومهامك محفوظة على حسابك بكلمة سر، ومحدش يشوفها غيرك.</p></div>
       </section>
 
       <section className="grid items-end gap-8 py-20 md:grid-cols-[1.3fr_auto]">
         <h2 className="text-[clamp(34px,5vw,60px)] font-extrabold leading-[1.15]">النهارده {today}.<br />تعرف الشغل اللي هيتسلّم بكرة؟</h2>
-        <Link href="/app" className={btnClass()}>افتح الدفتر</Link>
+        <Link href="/signup" className={btnClass()}>افتح الدفتر</Link>
       </section>
       <SiteFooter />
     </div>

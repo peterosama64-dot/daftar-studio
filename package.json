@@ -9,14 +9,18 @@
     "lint": "eslint",
     "test": "vitest run",
     "postinstall": "prisma generate",
-    "db:push": "prisma db push"
+    "vercel-build": "prisma generate && prisma migrate deploy && next build",
+    "db:migrate": "prisma migrate dev"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
     "@prisma/client": "^6.19.3",
+    "bcryptjs": "^3.0.3",
+    "jose": "^6.2.12",
     "next": "15.5.26",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "server-only": "^0.0.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {

@@ -11,7 +11,7 @@ export function SiteNav() {
         <Link href="/#report" className="hover:text-cyan">التقرير</Link>
         <Link href="/pricing" className="hover:text-cyan">الأسعار</Link>
       </div>
-      <Link href="/app" className={btnClass("primary", true)}>افتح الدفتر</Link>
+      <div className="flex items-center gap-3"><Link href="/login" className="hidden text-[15px] text-ink2 hover:text-cyan sm:inline">ادخل</Link><Link href="/signup" className={btnClass("primary", true)}>افتح دفترك</Link></div>
     </nav>
   );
 }

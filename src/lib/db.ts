@@ -4,7 +4,7 @@ const g = globalThis as unknown as { prisma?: PrismaClient };
 export const prisma = g.prisma ?? new PrismaClient();
 if (process.env.NODE_ENV !== "production") g.prisma = prisma;
 
-export async function getCurrency(): Promise<string> {
-  const s = await prisma.setting.findUnique({ where: { key: "currency" } });
-  return s?.value ?? "EGP";
+export async function getCurrency(userId: string): Promise<string> {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { currency: true } });
+  return u?.currency ?? "EGP";
 }

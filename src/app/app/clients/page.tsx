@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/auth";
 import Link from "next/link";
 import { PageHead } from "@/components/month";
 import { Card, Empty } from "@/components/ui";
@@ -10,10 +11,11 @@ export const metadata = { title: "العملاء" };
 
 /** Clients are derived from the names used on tasks and income rows. */
 export default async function Clients() {
+  const uid = await requireUser();
   const [tasks, income, cur] = await Promise.all([
-    prisma.task.findMany(),
-    prisma.entry.findMany({ where: { kind: "income" }, orderBy: { date: "desc" } }),
-    currencyShort(),
+    prisma.task.findMany({ where: { userId: uid } }),
+    prisma.entry.findMany({ where: { userId: uid, kind: "income" }, orderBy: { date: "desc" } }),
+    currencyShort(uid),
   ]);
   const now = nowTz();
   const thisMonth = monthKey(now), thisYear = now.getFullYear();
