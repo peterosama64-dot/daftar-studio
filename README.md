@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# دفتر الاستوديو
 
-## Getting Started
+شغلك وفلوسك كمصمم أو آرت دايركتور في دفتر واحد. بتقول أو بتكتب اللي عندك، والدفتر يرتّبه لمهام ودخل واشتراكات ومصاريف، ويقولك المستعجل إيه وصافي ربحك كام.
 
-First, run the development server:
+Next.js 15 (App Router) · TypeScript · Tailwind v4 · Prisma · Claude API. Arabic, RTL.
+
+## التشغيل على جهازك
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env      # DATABASE_URL فيها SQLite جاهزة
+npx prisma db push        # يعمل قاعدة البيانات
+npm run dev               # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| متغير | لازم؟ | بيعمل إيه |
+|---|---|---|
+| `DATABASE_URL` | أيوه | SQLite محلياً (`file:./dev.db`). في الإنتاج: PostgreSQL. |
+| `ANTHROPIC_API_KEY` | لأ | «رتّبهالي» والتقرير المكتوب بـ Claude. من غيره بيشتغل ترتيب مبدئي بسيط من غير ذكاء. |
+| `APP_PASSWORD` | في الإنتاج أيوه | بيقفل `/app` و`/api` بكلمة سر لحد ما الحسابات تتعمل. |
+| `APP_TIMEZONE` | لأ | الافتراضي `Africa/Cairo`. بيحدد «النهارده» إيه. |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## الأوامر
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `npm test` — اختبارات المنطق: تصنيف المهام، حساب الفلوس، التواريخ، والترتيب المبدئي.
+- `npx tsc --noEmit` — فحص الأنواع.
+- `npm run build` — نسخة الإنتاج.
 
-## Learn More
+## الصفحات
 
-To learn more about Next.js, take a look at the following resources:
+| المسار | الصفحة |
+|---|---|
+| `/` | صفحة الهبوط |
+| `/pricing` | الأسعار |
+| `/login` | الدخول |
+| `/app` | الرئيسية: فلوس الشهر، «قول أو اكتب»، المستعجل، الأسبوع ده |
+| `/app/tasks` | بورد الشغل: مستعجل / ليه لسه شوية / خلصته |
+| `/app/tasks/[id]` | تفاصيل مهمة: الحالة، المتفق عليه واللي اتدفع، ملاحظات |
+| `/app/money` | الدخل والاشتراكات والمصاريف، ورسم آخر ٦ شهور |
+| `/app/inbox` | لزق شات واتساب وتطليع المهام والمبالغ منه |
+| `/app/report` | تقرير الشهر |
+| `/app/clients` | العملاء واللي لسه مستحق |
+| `/app/settings` | العملة والربط ومسح البيانات |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## المراحل
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **✓ المرحلة ١ (دي):** كل الصفحات شغالة ببيانات حقيقية، التسجيل بالصوت، الترتيب بـ Claude، التقرير، كلمة سر للموقع.
+2. **المرحلة ٢:** حسابات لكل مستخدم (تسجيل دخول)، PostgreSQL، والرفع على Vercel بدومين.
+3. **المرحلة ٣:** ربط Gmail (OAuth) وقراءة إيصالات الاشتراكات.
+4. **المرحلة ٤:** تذكيرات بالمواعيد، وتصدير التقرير PDF.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+التصميم والهوية في `DESIGN.md`.

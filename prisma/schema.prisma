@@ -1,0 +1,43 @@
+// Dev: SQLite (file:./dev.db). Production: switch provider to "postgresql".
+// Enum-like fields are Strings; allowed values live in src/lib/constants.ts.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Task {
+  id        String    @id @default(cuid())
+  title     String
+  client    String    @default("")
+  due       DateTime?
+  priority  String    @default("normal") // high | normal | low
+  status    String    @default("todo")   // todo | doing | done
+  source    String    @default("manual") // manual | voice | gmail | chat
+  notes     String    @default("")
+  agreed    Float?
+  paid      Float?
+  doneAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Entry {
+  id         String    @id @default(cuid())
+  kind       String    // income | subscription | expense
+  name       String
+  client     String    @default("")
+  amount     Float
+  date       DateTime? // income + expense
+  startMonth String?   // subscription: "YYYY-MM"
+  endMonth   String?   // subscription: last billed month, null = active
+  createdAt  DateTime  @default(now())
+}
+
+model Setting {
+  key   String @id
+  value String
+}

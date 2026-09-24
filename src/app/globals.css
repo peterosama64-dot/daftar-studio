@@ -1,26 +1,56 @@
 @import "tailwindcss";
 
+/* Design tokens — see DESIGN.md. Light is the default; dark follows the OS. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --paper: #f4f3ef; --sheet: #fbfbf9; --sunken: #e9e7e0; --selected: #f0f6f7;
+  --ink: #17181c; --ink2: #3b3d45; --muted: #6c6e78; --rule: #dcdad3;
+  --cyan: #0b6e8a; --cyan-soft: #dbeef3;
+  --money: #1f7a4d; --money-soft: #dcefe4;
+  --risk: #b3261e; --risk-soft: #f8e0dc;
+  --wait: #9a5b0c; --wait-soft: #f7ecd8;
+  --on-accent: #ffffff;
+  color-scheme: light;
 }
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --paper: #111215; --sheet: #18191e; --sunken: #0c0d10; --selected: #13262b;
+    --ink: #eeedf0; --ink2: #c9c9d0; --muted: #9a9ca7; --rule: #2b2d35;
+    --cyan: #5cc2dc; --cyan-soft: #10303a;
+    --money: #5fd39a; --money-soft: #132e20;
+    --risk: #ff8a80; --risk-soft: #3a1916;
+    --wait: #efb25c; --wait-soft: #33250f;
+    --on-accent: #111215;
+    color-scheme: dark;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@theme inline {
+  --color-paper: var(--paper);
+  --color-sheet: var(--sheet);
+  --color-sunken: var(--sunken);
+  --color-selected: var(--selected);
+  --color-ink: var(--ink);
+  --color-ink2: var(--ink2);
+  --color-muted: var(--muted);
+  --color-rule: var(--rule);
+  --color-cyan: var(--cyan);
+  --color-cyan-soft: var(--cyan-soft);
+  --color-money: var(--money);
+  --color-money-soft: var(--money-soft);
+  --color-risk: var(--risk);
+  --color-risk-soft: var(--risk-soft);
+  --color-wait: var(--wait);
+  --color-wait-soft: var(--wait-soft);
+  --color-on-accent: var(--on-accent);
+  --font-display: var(--font-alexandria), "Readex Pro", system-ui, sans-serif;
+  --font-body: var(--font-readex), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --shadow-float: 0 1px 0 rgb(23 24 28 / 0.04), 0 18px 40px -24px rgb(23 24 28 / 0.28);
 }
+
+html { background: var(--paper); }
+body { background: var(--paper); color: var(--ink); font-family: var(--font-body); line-height: 1.7; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
