@@ -1,14 +1,15 @@
 // PostgreSQL everywhere (local, preview, production).
 // Enum-like fields are Strings; allowed values live in src/lib/constants.ts.
-// DATABASE_URL = pooled connection (app). DIRECT_URL = direct connection (migrations).
+// Env names match the Supabase ↔ Vercel integration, which sets them automatically:
+// POSTGRES_PRISMA_URL = pooled connection (app), POSTGRES_URL_NON_POOLING = direct (migrations).
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
 }
 
 model User {
