@@ -17,19 +17,21 @@ npm run dev               # http://localhost:3000 ← اعمل حساب من /si
 
 | متغير | لازم؟ | بيعمل إيه |
 |---|---|---|
-| `DATABASE_URL` | أيوه | رابط PostgreSQL. على Neon/Supabase استخدم الرابط الـ pooled. |
-| `DIRECT_URL` | أيوه | رابط مباشر لنفس القاعدة، بيستخدمه Prisma للـ migrations. |
+| `POSTGRES_PRISMA_URL` | أيوه | رابط PostgreSQL الـ pooled. على Vercel بيتحط لوحده لما توصّل Supabase. |
+| `POSTGRES_URL_NON_POOLING` | أيوه | رابط مباشر لنفس القاعدة، بيستخدمه Prisma للـ migrations. بيتحط لوحده برضه. |
 | `SESSION_SECRET` | في الإنتاج أيوه | بيوقّع كوكي الدخول. ٣٢ حرف عشوائي على الأقل: `openssl rand -base64 48`. |
 | `ANTHROPIC_API_KEY` | لأ | «رتّبهالي» والتقرير المكتوب بـ Claude. من غيره بيشتغل ترتيب مبدئي بسيط. |
 | `APP_TIMEZONE` | لأ | الافتراضي `Africa/Cairo`. بيحدد «النهارده» إيه. |
 
 ## الرفع على Vercel
 
-1. اعمل قاعدة PostgreSQL (Neon أو Supabase) وخد الرابطين: pooled و direct.
-2. على vercel.com: New Project ← اختار الـ repo ده.
-3. في Environment Variables حط: `DATABASE_URL` و `DIRECT_URL` و `SESSION_SECRET` (و `ANTHROPIC_API_KEY` لو عايز Claude).
-4. Build Command سيبه زي ما هو: Vercel بيشغّل `vercel-build` لوحده، وده بيعمل `prisma migrate deploy` قبل الـ build.
-5. Deploy. وبعدها من Settings ← Domains ضيف الدومين بتاعك.
+1. vercel.com ← **Add New… ← Project** ← اختار repo `daftar-studio` ← **Import**. (لو الـ deploy الأول وقع عشان قاعدة البيانات، عادي، كمّل.)
+2. في المشروع: **Storage ← Create Database ← Supabase** (أو Connect لو عندك قاعدة Supabase). ده بيعمل القاعدة ويحط `POSTGRES_PRISMA_URL` و `POSTGRES_URL_NON_POOLING` لوحده.
+3. **Settings ← Environment Variables** ضيف:
+   - `SESSION_SECRET`: ٤٠ حرف عشوائي أو أكتر (أي كلام طويل ملخبط، ومتستخدموش في أي مكان تاني).
+   - `ANTHROPIC_API_KEY` (اختياري): عشان «رتّبهالي» والتقرير يشتغلوا بـ Claude.
+4. **Deployments ← آخر deploy ← Redeploy**. الـ build بيشغّل `prisma migrate deploy` لوحده ويعمل الجداول.
+5. (اختياري) **Settings ← Domains** ضيف الدومين بتاعك.
 
 ⚠️ `prisma migrate deploy` بيطبّق الـ migrations الجديدة بس ومش بيمسح بيانات. ممنوع تشغّل `migrate dev` أو `migrate reset` على قاعدة الإنتاج: الاتنين ممكن يمسحوا البيانات.
 
