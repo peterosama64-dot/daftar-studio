@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/auth";
 import { PageHead } from "@/components/month";
 import { Card } from "@/components/ui";
 import { AiReport } from "@/components/ai-report";
@@ -10,8 +11,9 @@ import { monthName } from "@/lib/dates";
 export const metadata = { title: "تقرير الشهر" };
 
 export default async function Report({ searchParams }: { searchParams: SP }) {
+  const uid = await requireUser();
   const month = await monthFrom(searchParams);
-  const d = await loadMonth(month);
+  const d = await loadMonth(month, uid);
   const f = reportFacts(month, d);
   const clients = incomeByClient(d.totals.income);
   const top = clients[0]?.[1] ?? 1;

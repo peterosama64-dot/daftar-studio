@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/auth";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
@@ -10,7 +11,8 @@ import { updateTask, deleteTaskAndReturn } from "../../actions";
 
 export default async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [t, cur] = await Promise.all([prisma.task.findUnique({ where: { id } }), currencyShort()]);
+  const uid = await requireUser();
+  const [t, cur] = await Promise.all([prisma.task.findFirst({ where: { id, userId: uid } }), currencyShort(uid)]);
   if (!t) notFound();
   const paidPct = t.agreed ? Math.min(100, ((t.paid ?? 0) / t.agreed) * 100) : 0;
   return (

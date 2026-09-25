@@ -1,16 +1,31 @@
-// Dev: SQLite (file:./dev.db). Production: switch provider to "postgresql".
+// PostgreSQL everywhere (local, preview, production).
 // Enum-like fields are Strings; allowed values live in src/lib/constants.ts.
+// DATABASE_URL = pooled connection (app). DIRECT_URL = direct connection (migrations).
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String   @default("")
+  passwordHash String
+  currency     String   @default("EGP")
+  createdAt    DateTime @default(now())
+  tasks        Task[]
+  entries      Entry[]
 }
 
 model Task {
   id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String
   client    String    @default("")
   due       DateTime?
@@ -23,10 +38,14 @@ model Task {
   doneAt    DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  @@index([userId, status])
 }
 
 model Entry {
   id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   kind       String    // income | subscription | expense
   name       String
   client     String    @default("")
@@ -35,9 +54,6 @@ model Entry {
   startMonth String?   // subscription: "YYYY-MM"
   endMonth   String?   // subscription: last billed month, null = active
   createdAt  DateTime  @default(now())
-}
 
-model Setting {
-  key   String @id
-  value String
+  @@index([userId, kind])
 }

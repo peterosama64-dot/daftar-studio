@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/auth";
 import { MoneyStrip } from "@/components/money-strip";
 import { PageHead } from "@/components/month";
 import { Button, Card, Empty, inputClass } from "@/components/ui";
@@ -9,8 +10,9 @@ import { addEntry, deleteEntry, stopSubscription } from "../actions";
 export const metadata = { title: "الفلوس" };
 
 export default async function Money({ searchParams }: { searchParams: SP }) {
+  const uid = await requireUser();
   const month = await monthFrom(searchParams);
-  const { entries, totals: t, cur } = await loadMonth(month);
+  const { entries, totals: t, cur } = await loadMonth(month, uid);
   const months = Array.from({ length: 6 }, (_, i) => shiftMonth(month, i - 5)).map((k) => ({ k, ...monthTotals(entries, k) }));
   const max = Math.max(1, ...months.map((m) => Math.max(m.I, m.out)));
   const [y, mm] = month.split("-").map(Number);

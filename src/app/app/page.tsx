@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/auth";
 import { Capture } from "@/components/capture";
 import { MoneyStrip } from "@/components/money-strip";
 import { TaskCard } from "@/components/task-card";
@@ -8,8 +9,9 @@ import { AR_DAYS, AR_MONTHS, daysUntil, shortDate } from "@/lib/dates";
 import { fmt } from "@/lib/money";
 
 export default async function Home({ searchParams }: { searchParams: SP }) {
+  const uid = await requireUser();
   const month = await monthFrom(searchParams);
-  const { today, urgent, tasks, entries, totals, cur } = await loadMonth(month);
+  const { today, urgent, tasks, entries, totals, cur } = await loadMonth(month, uid);
   const h = today.getHours();
   const greet = h < 12 ? "صباح الخير" : "مساء الخير";
 

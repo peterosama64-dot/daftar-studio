@@ -11,18 +11,18 @@ export async function monthFrom(sp: SP) {
   return isMonthKey(m) ? m : monthKey(now());
 }
 
-export async function currencyShort() {
-  const code = await getCurrency();
+export async function currencyShort(userId: string) {
+  const code = await getCurrency(userId);
   return { code, short: CURRENCIES.find((c) => c.code === code)?.short ?? "ج.م" };
 }
 
 /** Everything the dashboard-style pages need for one month. */
-export async function loadMonth(month: string) {
+export async function loadMonth(month: string, userId: string) {
   const today = now();
   const [tasks, entries, cur] = await Promise.all([
-    prisma.task.findMany({ orderBy: { createdAt: "desc" } }),
-    prisma.entry.findMany({ orderBy: { createdAt: "desc" } }),
-    currencyShort(),
+    prisma.task.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
+    prisma.entry.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
+    currencyShort(userId),
   ]);
   const urgent = tasks.filter((t) => bucket(t, today) === "urgent").sort(byDue);
   const later = tasks.filter((t) => bucket(t, today) === "later").sort(byDue);
