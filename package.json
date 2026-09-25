@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "postinstall": "prisma generate",
-    "vercel-build": "prisma generate && prisma migrate deploy && next build",
+    "vercel-build": "prisma generate && node scripts/migrate.mjs && next build",
     "db:migrate": "prisma migrate dev"
   },
   "dependencies": {
