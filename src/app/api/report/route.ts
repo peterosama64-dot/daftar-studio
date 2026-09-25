@@ -8,7 +8,7 @@ import { currentUserId } from "@/lib/auth";
 export async function POST(req: Request) {
   const uid = await currentUserId();
   if (!uid) return NextResponse.json({ error: "سجّل دخول الأول." }, { status: 401 });
-  if (!aiEnabled()) return NextResponse.json({ error: "التقرير المكتوب محتاج ANTHROPIC_API_KEY في إعدادات السيرفر." }, { status: 501 });
+  if (!aiEnabled()) return NextResponse.json({ error: "التقرير المكتوب محتاج GEMINI_API_KEY أو ANTHROPIC_API_KEY في إعدادات السيرفر." }, { status: 501 });
   const { month } = (await req.json().catch(() => ({}))) as { month?: string };
   if (!isMonthKey(month)) return NextResponse.json({ error: "شهر غلط." }, { status: 400 });
   const text = await writeReport(reportFacts(month, await loadMonth(month, uid)));

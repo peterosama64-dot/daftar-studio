@@ -27,7 +27,7 @@ export function AiReport({ month, enabled, fallback }: { month: string; enabled:
           {err && <span className="text-[13px] text-risk">{err}</span>}
         </div>
       ) : (
-        <p className="text-[13px] text-muted">التقرير ده محسوب من أرقامك. لما يتضاف ANTHROPIC_API_KEY هيظهر زرار «اكتبلي التقرير» ويكتبه Claude بالعامية.</p>
+        <p className="text-[13px] text-muted">التقرير ده محسوب من أرقامك. لما يتفعّل الترتيب الذكي هيظهر زرار «اكتبلي التقرير» ويكتبه بالعامية.</p>
       )}
     </div>
   );

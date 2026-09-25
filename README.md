@@ -21,6 +21,7 @@ npm run dev               # http://localhost:3000 ← اعمل حساب من /si
 | `POSTGRES_URL_NON_POOLING` | أيوه | رابط مباشر لنفس القاعدة، بيستخدمه Prisma للـ migrations. بيتحط لوحده برضه. |
 | `SESSION_SECRET` | في الإنتاج أيوه | بيوقّع كوكي الدخول. ٣٢ حرف عشوائي على الأقل: `openssl rand -base64 48`. |
 | `ADMIN_EMAILS` | لأ | إيميلات الأدمن مفصولة بفاصلة. بيفتحلهم «لوحة الأدمن» (`/app/admin`): عدد الحسابات، تغيير كلمة سر حد نسيها، ومسح حساب. |
+| `GEMINI_API_KEY` | لأ | بديل مجاني لـ Claude: «رتّبهالي» والتقرير المكتوب بـ Gemini. المفتاح من aistudio.google.com/apikey. الخطة المجانية ممكن Google تستخدم الكلام اللي بيتبعت لتحسين منتجاتها. `GEMINI_MODEL` اختياري (الافتراضي `gemini-flash-latest`). لو `ANTHROPIC_API_KEY` موجود، Claude بيتقدّم. |
 | `ANTHROPIC_API_KEY` | لأ | «رتّبهالي» والتقرير المكتوب بـ Claude. من غيره بيشتغل ترتيب مبدئي بسيط. |
 | `APP_TIMEZONE` | لأ | الافتراضي `Africa/Cairo`. بيحدد «النهارده» إيه. |
 
