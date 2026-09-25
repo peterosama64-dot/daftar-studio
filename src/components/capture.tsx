@@ -55,7 +55,7 @@ export function Capture({ source: fixedSource, initialText = "", title = "قول
       if (!res.ok) { setStatus({ msg: j.error ?? "ما عرفتش أرتّب الكلام ده. جرّب تاني.", err: true }); return; }
       if (!j.count) { setStatus({ msg: "ملقتش مهام أو فلوس في الكلام ده. جرّب تكتبه أوضح." }); setDraft(null); return; }
       setDraft(j.data);
-      setStatus({ msg: `لقيت ${j.count === 1 ? "حاجة واحدة" : j.count === 2 ? "حاجتين" : `${j.count} حاجات`}. راجعها واحفظ.${j.via === "offline" ? " (ترتيب مبدئي من غير Claude)" : ""}` });
+      setStatus({ msg: `لقيت ${j.count === 1 ? "حاجة واحدة" : j.count === 2 ? "حاجتين" : `${j.count} حاجات`}. راجعها واحفظ.${j.via === "offline" ? " (ترتيب مبدئي من غير الذكاء الاصطناعي)" : ""}` });
     } catch {
       setStatus({ msg: "النت فصل أو السيرفر مش بيرد. جرّب تاني.", err: true });
     } finally { setBusy(false); }

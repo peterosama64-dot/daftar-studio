@@ -5,7 +5,7 @@ import { CURRENCIES } from "@/lib/constants";
 import { getCurrency, prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { logout } from "@/app/(auth)/actions";
-import { aiEnabled } from "@/lib/ai";
+import { aiEnabled, aiName } from "@/lib/ai";
 import { isAdmin } from "@/lib/admin";
 import { setCurrency, deleteEverything } from "../actions";
 
@@ -47,7 +47,7 @@ export default async function Settings() {
         </Card>
         <Card className="p-5">
           <h2 className="text-lg font-bold">الربط</h2>
-          {row("الترتيب الذكي (Claude)", "بيحوّل كلامك ورسايل العملاء لمهام ومبالغ، ويكتب تقرير الشهر.", aiEnabled() ? <Pill tone="money">شغال</Pill> : <Pill tone="waiting">مش متفعّل</Pill>)}
+          {row("الترتيب الذكي", "بيحوّل كلامك ورسايل العملاء لمهام ومبالغ، ويكتب تقرير الشهر.", aiEnabled() ? <Pill tone="money">{`شغال · ${aiName()}`}</Pill> : <Pill tone="waiting">مش متفعّل</Pill>)}
           {row("Gmail", "قراءة الإيميلات وإيصالات الاشتراكات.", <Pill>المرحلة الجاية</Pill>)}
           {row("واتساب", "مفيش ربط مباشر. صدّر الشات والزقه في «الرسايل».", <Pill>يدوي</Pill>)}
         </Card>
