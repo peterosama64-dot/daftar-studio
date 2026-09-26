@@ -4,6 +4,8 @@ import { SESSION_COOKIE, verifySession } from "@/lib/session";
 // Fast gate: no valid session cookie → /login (pages) or 401 (API).
 // Pages and actions still re-check the user in the database (lib/auth.ts).
 export async function middleware(req: NextRequest) {
+  // The daily reminder job is called by Vercel Cron, not a user (it checks CRON_SECRET itself).
+  if (req.nextUrl.pathname === "/api/cron/reminders") return NextResponse.next();
   const uid = await verifySession(req.cookies.get(SESSION_COOKIE)?.value);
   if (uid) return NextResponse.next();
   // The Gmail connect/callback routes are browser navigations (to and from Google), not fetches.

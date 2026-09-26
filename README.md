@@ -23,6 +23,7 @@ npm run dev               # http://localhost:3000 ← اعمل حساب من /si
 | `ADMIN_EMAILS` | لأ | إيميلات الأدمن مفصولة بفاصلة. بيفتحلهم «لوحة الأدمن» (`/app/admin`): عدد الحسابات، تغيير كلمة سر حد نسيها، ومسح حساب. |
 | `GEMINI_API_KEY` | لأ | بديل مجاني لـ Claude: «رتّبهالي» والتقرير المكتوب بـ Gemini. المفتاح من aistudio.google.com/apikey. الخطة المجانية ممكن Google تستخدم الكلام اللي بيتبعت لتحسين منتجاتها. `GEMINI_MODEL` اختياري (الافتراضي `gemini-flash-latest`). لو `ANTHROPIC_API_KEY` موجود، Claude بيتقدّم. |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | لأ | ربط Gmail (قراءة بس) في «الرسايل». عميل OAuth من Google Cloud Console، والـ Redirect URI هو `https://<الدومين>/api/gmail/callback`. مفتاح التوكن بيتشفّر بمفتاح مشتق من `SESSION_SECRET`. |
+| `CRON_SECRET` / `PUSH_CONTACT` | لأ | التذكيرات اليومية (Web Push) مش محتاجة إعداد: المفاتيح بتتعمل لوحدها أول مرة. `vercel.json` بيشغّل `/api/cron/reminders` كل يوم 06:00 UTC. لو حطيت `CRON_SECRET` مفيش حد غير Vercel يقدر يشغّله. |
 | `ANTHROPIC_API_KEY` | لأ | «رتّبهالي» والتقرير المكتوب بـ Claude. من غيره بيشتغل ترتيب مبدئي بسيط. |
 | `APP_TIMEZONE` | لأ | الافتراضي `Africa/Cairo`. بيحدد «النهارده» إيه. |
 
