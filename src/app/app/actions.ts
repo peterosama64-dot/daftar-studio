@@ -11,7 +11,8 @@ import { CURRENCIES, PRIORITIES, SOURCES, STATUSES } from "@/lib/constants";
 import { monthKey, parseDay, isMonthKey, now } from "@/lib/dates";
 import { ParsedSchema } from "@/lib/parsed";
 import { runRecurring } from "@/lib/recurring";
-import { parseItems, quoteNotes, quoteNumber, quoteTotal, readItems } from "@/lib/quote";
+import { parseItems } from "@/lib/quote";
+import { acceptQuoteFor, newToken } from "@/lib/share";
 
 const done = () => revalidatePath("/app", "layout");
 const str = (f: FormData, k: string, max = 200) => String(f.get(k) ?? "").trim().slice(0, max);
@@ -215,26 +216,34 @@ export async function createQuote(f: FormData) {
   redirect(`/app/quotes/${q.id}`);
 }
 
-/** The client said yes: make the task (agreed = quote total) once, and link it. */
+/** The client said yes (told the owner): make the task once and open it. */
 export async function acceptQuote(id: string) {
   const userId = await requireUser();
-  const q = await prisma.quote.findFirst({ where: { id, userId } });
-  if (!q) return;
-  if (q.status !== "accepted") {
-    const items = readItems(q.items);
-    const due = q.deliveryDays ? new Date(now().getTime() + q.deliveryDays * 86_400_000) : null;
-    await prisma.$transaction(async (tx) => {
-      const claimed = await tx.quote.updateMany({ where: { id, userId, status: "draft" }, data: { status: "accepted" } });
-      if (!claimed.count) return;
-      const t = await tx.task.create({
-        data: { userId, title: q.title, client: q.client, agreed: quoteTotal(items), due, notes: quoteNotes(quoteNumber(q), items, q.deliveryDays, q.notes) },
-      });
-      await tx.quote.updateMany({ where: { id, userId }, data: { taskId: t.id } });
-    });
-  }
+  const r = await acceptQuoteFor(userId, id);
   done();
-  const fresh = await prisma.quote.findFirst({ where: { id, userId }, select: { taskId: true } });
-  if (fresh?.taskId) redirect(`/app/tasks/${fresh.taskId}`);
+  if (r?.taskId) redirect(`/app/tasks/${r.taskId}`);
+}
+
+// ---------- client links ----------
+export async function shareQuote(id: string) {
+  const userId = await requireUser();
+  await prisma.quote.updateMany({ where: { id, userId, shareToken: null }, data: { shareToken: newToken() } });
+  revalidatePath(`/app/quotes/${id}`);
+}
+export async function unshareQuote(id: string) {
+  const userId = await requireUser();
+  await prisma.quote.updateMany({ where: { id, userId }, data: { shareToken: null } });
+  revalidatePath(`/app/quotes/${id}`);
+}
+export async function shareInvoice(id: string) {
+  const userId = await requireUser();
+  await prisma.task.updateMany({ where: { id, userId, shareToken: null }, data: { shareToken: newToken() } });
+  revalidatePath(`/app/tasks/${id}/invoice`);
+}
+export async function unshareInvoice(id: string) {
+  const userId = await requireUser();
+  await prisma.task.updateMany({ where: { id, userId }, data: { shareToken: null } });
+  revalidatePath(`/app/tasks/${id}/invoice`);
 }
 
 export async function deleteQuote(id: string) {
