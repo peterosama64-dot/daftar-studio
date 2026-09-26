@@ -6,6 +6,7 @@ import { buildDigest, buildMonthly } from "@/lib/reminders";
 import { owedByClient } from "@/lib/owed";
 import { CURRENCIES } from "@/lib/constants";
 import { pushToUser } from "@/lib/push";
+import { runRecurring } from "@/lib/recurring";
 
 export const maxDuration = 60;
 
@@ -18,6 +19,8 @@ export async function GET(req: Request) {
 
   const today = now();
   const key = dayKey(today);
+  // Monthly jobs first, for every user (not only those with notifications), so today's digest sees them.
+  const recurring = await runRecurring(prisma, today);
   const tomorrowEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2);
   const users = await prisma.user.findMany({
     where: { push: { some: {} }, OR: [{ lastDigest: null }, { lastDigest: { not: key } }] },
@@ -60,5 +63,5 @@ export async function GET(req: Request) {
       if (m && (await pushToUser(u.id, { ...m, url: `/app/report?m=${prev}`, tag: "daftar-monthly" })).sent) monthly++;
     }
   }
-  return NextResponse.json({ day: key, users: users.length, sent, quiet, monthly });
+  return NextResponse.json({ day: key, users: users.length, sent, quiet, monthly, recurring });
 }

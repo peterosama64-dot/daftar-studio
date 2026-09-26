@@ -32,6 +32,7 @@ vi.mock("../src/lib/db", () => {
           ? db.tasks.filter((t) => t.userId === where.userId && (t.agreed ?? 0) > where.agreed.gt).map((t, i) => ({ id: String(i), ...t }))
           : db.tasks.filter((t) => t.userId === where.userId && t.status !== "done" && t.due && t.due < where.due.lt),
       },
+      recurringJob: { findMany: async () => [], updateMany: async () => ({ count: 0 }) },
       entry: { findMany: async ({ where }: any) => db.entries.filter((e) => e.userId === where.userId) },
       pushSubscription: {
         findMany: async ({ where }: any) => db.subs.filter((s) => s.userId === where.userId),
