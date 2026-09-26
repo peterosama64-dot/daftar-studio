@@ -8,7 +8,7 @@ import { logout } from "@/app/(auth)/actions";
 import { aiEnabled, aiName } from "@/lib/ai";
 import { isAdmin } from "@/lib/admin";
 import { NotifyCard } from "@/components/notify-card";
-import { setCurrency, deleteEverything } from "../actions";
+import { setCurrency, setName, deleteEverything } from "../actions";
 
 export const metadata = { title: "الإعدادات" };
 
@@ -34,6 +34,15 @@ export default async function Settings() {
               <form action={logout}><Button kind="secondary" small>اخرج</Button></form>
             </div>
           </div>
+        </Card>
+        <Card className="p-5">
+          <h2 className="mb-2 text-lg font-bold">اسمك على الفواتير</h2>
+          <form action={setName} className="flex flex-wrap items-end gap-2">
+            <Field label="اسمك أو اسم الاستوديو">
+              <input name="name" defaultValue={user?.name ?? ""} maxLength={80} className={inputClass} />
+            </Field>
+            <Button small>احفظ</Button>
+          </form>
         </Card>
         <Card className="p-5">
           <h2 className="mb-2 text-lg font-bold">العملة</h2>
