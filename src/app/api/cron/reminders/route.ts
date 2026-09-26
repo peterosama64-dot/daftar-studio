@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { dayKey, now } from "@/lib/dates";
 import { buildDigest } from "@/lib/reminders";
+import { owedByClient } from "@/lib/owed";
+import { CURRENCIES } from "@/lib/constants";
 import { pushToUser } from "@/lib/push";
 
 export const maxDuration = 60;
@@ -18,7 +20,7 @@ export async function GET(req: Request) {
   const tomorrowEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2);
   const users = await prisma.user.findMany({
     where: { push: { some: {} }, OR: [{ lastDigest: null }, { lastDigest: { not: key } }] },
-    select: { id: true },
+    select: { id: true, currency: true },
   });
 
   let sent = 0, quiet = 0;
@@ -31,7 +33,12 @@ export async function GET(req: Request) {
       orderBy: { due: "asc" },
       take: 30,
     });
-    const digest = buildDigest(tasks, today);
+    // Money owed only goes into Sunday's reminder, so only read it then.
+    const owed = today.getDay() === 0
+      ? owedByClient(await prisma.task.findMany({ where: { userId: u.id, agreed: { gt: 0 } }, select: { id: true, title: true, client: true, agreed: true, paid: true } }))
+      : null;
+    const currency = CURRENCIES.find((c) => c.code === u.currency)?.short ?? "ج.م";
+    const digest = buildDigest(tasks, today, owed ? { total: owed.total, clients: owed.clients.length, currency } : undefined);
     if (!digest) { quiet++; continue; }
     if ((await pushToUser(u.id, { title: digest.title, body: digest.body, url: "/app/tasks" })).sent) sent++;
   }

@@ -147,3 +147,19 @@ describe("invoice", () => {
     expect(safeFileName('فاتورة-كافيه نون/فرع 2-INV:1')).toBe("فاتورة-كافيه-نون-فرع-2-INV-1");
   });
 });
+
+import { owedByClient } from "../src/lib/owed";
+describe("money owed", () => {
+  it("groups agreed minus paid by client, biggest first, skipping settled tasks", () => {
+    const r = owedByClient([
+      { id: "1", title: "لوجو", client: "سكر", agreed: 3000, paid: 1000 },
+      { id: "2", title: "منيو", client: "سكر", agreed: 1500, paid: null },
+      { id: "3", title: "بانر", client: "نون", agreed: 5000, paid: 1000 },
+      { id: "4", title: "كارت", client: "نون", agreed: 800, paid: 800 },
+      { id: "5", title: "ستوري", client: "", agreed: 400, paid: 900 },
+    ]);
+    expect(r.total).toBe(7500);
+    expect(r.clients.map((c) => [c.name, c.owed])).toEqual([["نون", 4000], ["سكر", 3500]]);
+    expect(r.clients[1].tasks.map((t) => t.title)).toEqual(["لوجو", "منيو"]);
+  });
+});

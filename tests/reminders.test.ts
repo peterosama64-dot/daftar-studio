@@ -85,6 +85,16 @@ describe("buildDigest", () => {
     expect(g.body.length).toBeLessThanOrEqual(220);
     expect(buildDigest([{ title: "y", client: "", due: day(1), status: "todo" }], today)!.title).toBe("بكرة عندك مهمة");
   });
+  it("adds what clients owe on Sundays only, and can send it alone", () => {
+    const sunday = new Date(2026, 8, 27), monday = new Date(2026, 8, 28);
+    const owed = { total: 7500, clients: 2, currency: "ج.م" };
+    const task = [{ title: "بوستر", client: "", due: sunday, status: "todo" }];
+    expect(buildDigest(task, sunday, owed)!.body).toContain("ليك 7,500 ج.م عند 2 عملاء");
+    expect(buildDigest(task, monday, owed)!.body).not.toContain("ليك");
+    expect(buildDigest([], sunday, owed)).toEqual({ title: "فلوسك عند العملاء", body: "ليك 7,500 ج.م عند 2 عملاء. افتح «الفلوس» وشوف مين.", count: 0 });
+    expect(buildDigest([], monday, owed)).toBeNull();
+    expect(buildDigest([], sunday, { ...owed, total: 0 })).toBeNull();
+  });
 });
 
 describe("daily reminder job", () => {

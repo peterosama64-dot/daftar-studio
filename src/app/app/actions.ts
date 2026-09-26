@@ -89,6 +89,22 @@ export async function updateTask(id: string, f: FormData) {
   done();
 }
 
+/** «قبضت الباقي»: mark a task fully paid and record the remaining amount as income today. */
+export async function collectRemaining(id: string) {
+  const userId = await requireUser();
+  const t = await prisma.task.findFirst({ where: { id, userId } });
+  if (!t?.agreed) return;
+  const remaining = t.agreed - (t.paid ?? 0);
+  if (remaining <= 0) return;
+  // Only the request that still sees the old «paid» wins, so a double tap never records the income twice.
+  await prisma.$transaction(async (tx) => {
+    const claimed = await tx.task.updateMany({ where: { id, userId, paid: t.paid }, data: { paid: t.agreed } });
+    if (!claimed.count) return;
+    await tx.entry.create({ data: { userId, kind: "income", name: t.title.slice(0, 120), client: t.client, amount: remaining, date: now() } });
+  });
+  done();
+}
+
 // ---------- money ----------
 export async function addEntry(f: FormData) {
   const userId = await requireUser();
