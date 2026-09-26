@@ -298,3 +298,14 @@ describe("revisions & deliveries", () => {
     expect(safeName('../lo"go?.png')).toBe("..-lo-go-.png");
   });
 });
+
+import { whatsappLink } from "../src/lib/contact";
+describe("client contact", () => {
+  it("builds WhatsApp links for Egyptian and international numbers", () => {
+    expect(whatsappLink("01012345678")).toBe("https://wa.me/201012345678");
+    expect(whatsappLink("٠١٠ ١٢٣٤ ٥٦٧٨")).toBe("https://wa.me/201012345678");
+    expect(whatsappLink("+966 50 123 4567")).toBe("https://wa.me/966501234567");
+    expect(whatsappLink("00971501234567")).toBe("https://wa.me/971501234567");
+    expect(whatsappLink("123")).toBeNull();
+  });
+});

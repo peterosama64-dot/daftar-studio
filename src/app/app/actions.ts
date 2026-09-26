@@ -379,3 +379,13 @@ export async function deleteSubtask(id: string) {
   await prisma.subtask.deleteMany({ where: { id, userId } });
   taskPath(s.taskId);
 }
+
+// ---------- clients ----------
+export async function saveClientInfo(name: string, f: FormData) {
+  const userId = await requireUser();
+  const n = name.trim().slice(0, 80);
+  if (!n) return;
+  const data = { phone: str(f, "phone", 40), email: str(f, "email", 120), notes: str(f, "notes", 2000) };
+  await prisma.clientInfo.upsert({ where: { userId_name: { userId, name: n } }, create: { userId, name: n, ...data }, update: data });
+  revalidatePath(`/app/clients/${encodeURIComponent(n)}`);
+}
