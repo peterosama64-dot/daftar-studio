@@ -95,14 +95,20 @@ export function bodyText(p: Part): string {
     .slice(0, 6000);
 }
 
-// Last two weeks, without promotions/social/forums: client mail and receipts.
-const QUERY = "newer_than:14d -category:promotions -category:social -category:forums -in:chats";
+// "recent": last two weeks, without promotions/social/forums (client mail).
+// "receipts": last three months of subscription receipts and invoices, wherever Gmail filed them.
+export type MailKind = "recent" | "receipts";
+export const QUERIES: Record<MailKind, string> = {
+  recent: "newer_than:14d -category:promotions -category:social -category:forums -in:chats",
+  receipts: "newer_than:90d -category:social -category:forums -in:chats " +
+    'subject:(receipt OR invoice OR billing OR renewal OR subscription OR "payment received" OR "your payment" OR "order confirmation" OR إيصال OR فاتورة OR اشتراك OR تجديد OR "تم الدفع")',
+};
 
-export async function recentMail(userId: string, max = 15): Promise<Mail[] | "reconnect" | null> {
+export async function recentMail(userId: string, max = 15, kind: MailKind = "recent"): Promise<Mail[] | "reconnect" | null> {
   const token = await accessToken(userId);
   if (token === null || token === "reconnect") return token;
   const h = { authorization: `Bearer ${token}` };
-  const list = await fetch(`${API}/messages?${new URLSearchParams({ q: QUERY, maxResults: String(max) })}`, { headers: h, signal: AbortSignal.timeout(15_000) });
+  const list = await fetch(`${API}/messages?${new URLSearchParams({ q: QUERIES[kind], maxResults: String(max) })}`, { headers: h, signal: AbortSignal.timeout(15_000) });
   if (!list.ok) throw new Error(`Gmail list failed: ${list.status}`);
   const ids = (((await list.json()) as { messages?: { id: string }[] }).messages ?? []).map((m) => m.id);
   const mails = await Promise.all(ids.map(async (id) => {

@@ -54,7 +54,7 @@ const parseSystem = (currency: string, today: Date) =>
   `Extract every task and every money movement from the user's text (Egyptian colloquial Arabic, English, or client messages). ` +
   `Rules: resolve relative dates (بكرة, الخميس الجاي, آخر الشهر) to real YYYY-MM-DD dates; use "" when there is no date. ` +
   `"مستعجل", "ضروري", "النهارده" mean priority high. "خلصت" / "سلّمت" something means status done. ` +
-  `Convert Arabic-Indic digits and "٥ آلاف" style amounts to numbers. Divide a yearly subscription by 12. ` +
+  `Convert Arabic-Indic digits and "٥ آلاف" style amounts to numbers. Divide a yearly subscription by 12. A receipt or invoice from a software or service vendor (Adobe, Canva, Figma, OpenAI, Google, Apple, Envato, Microsoft…) is a subscription, not an expense: name it by the product only (e.g. "Adobe Creative Cloud"), one row per product even if several receipts repeat it. If a receipt is not in the default currency, keep its number and add the currency to the name, e.g. "Figma (USD)". ` +
   `Write titles and names in short Arabic as the user would. Never invent items that are not in the text.`;
 
 const REPORT_SYSTEM =

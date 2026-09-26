@@ -6,6 +6,7 @@ import { Capture } from "./capture";
 import { disconnectGmailAction } from "@/app/app/inbox/actions";
 
 type Mail = { id: string; from: string; subject: string; date: string; snippet: string; text: string };
+type Kind = "recent" | "receipts";
 
 const NOTICES: Record<string, { msg: string; err?: boolean }> = {
   ok: { msg: "اتربط ✓ دوس «هات آخر الإيميلات»." },
@@ -21,20 +22,23 @@ const shortFrom = (f: string) => f.replace(/<[^>]+>/, "").replace(/"/g, "").trim
 export function GmailPanel({ email, configured, notice }: { email: string | null; configured: boolean; notice?: string }) {
   const [mails, setMails] = useState<Mail[] | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<Kind | null>(null);
+  const [kind, setKind] = useState<Kind>("recent");
   const [error, setError] = useState<string | null>(null);
   const [capture, setCapture] = useState<{ key: number; text: string } | null>(null);
   const n = notice ? NOTICES[notice] : undefined;
 
-  async function load() {
-    setLoading(true); setError(null);
+  async function load(k: Kind) {
+    setLoading(k); setError(null);
     try {
-      const res = await fetch("/api/gmail/messages");
+      const res = await fetch(k === "receipts" ? "/api/gmail/messages?kind=receipts" : "/api/gmail/messages");
       const j = await res.json();
       if (!res.ok) { setError(j.error ?? "حصلت مشكلة. جرّب تاني."); if (j.reconnect) location.reload(); return; }
-      setMails(j.mails); setPicked(new Set());
+      setMails(j.mails); setKind(k); setCapture(null);
+      // Receipts are what the user came for, so they start ticked; ordinary mail starts empty.
+      setPicked(new Set(k === "receipts" ? (j.mails as Mail[]).map((m) => m.id) : []));
     } catch { setError("النت فصل أو السيرفر مش بيرد. جرّب تاني."); }
-    finally { setLoading(false); }
+    finally { setLoading(null); }
   }
 
   function toggle(id: string) {
@@ -66,14 +70,17 @@ export function GmailPanel({ email, configured, notice }: { email: string | null
       ) : (
         <>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={load} disabled={loading}>{loading ? "بيجيب…" : mails ? "حدّث" : "هات آخر الإيميلات"}</Button>
+            <Button onClick={() => load("recent")} disabled={!!loading}>{loading === "recent" ? "بيجيب…" : "هات آخر الإيميلات"}</Button>
+            <Button kind="secondary" onClick={() => load("receipts")} disabled={!!loading}>{loading === "receipts" ? "بيدوّر…" : "إيصالات الاشتراكات"}</Button>
             <form action={disconnectGmailAction}><Button kind="secondary">افصل Gmail</Button></form>
           </div>
           {error && <p role="alert" className="text-sm text-risk">{error}</p>}
-          {mails && mails.length === 0 && <p className="text-sm text-muted">مفيش إيميلات في آخر أسبوعين (من غير العروض والسوشيال).</p>}
+          {mails && mails.length === 0 && <p className="text-sm text-muted">{kind === "receipts" ? "مفيش إيصالات اشتراكات في آخر ٣ شهور." : "مفيش إيميلات في آخر أسبوعين (من غير العروض والسوشيال)."}</p>}
           {mails && mails.length > 0 && (
             <>
-              <p className="text-[13px] text-muted">آخر أسبوعين. علّم على اللي فيه شغل أو فلوس:</p>
+              <p className="text-[13px] text-muted">{kind === "receipts"
+                ? "إيصالات وفواتير آخر ٣ شهور. شيل العلامة من اللي مش اشتراك، والدفتر هيضيف الباقي للاشتراكات (ولو الاشتراك موجود بيحدّث مبلغه بس):"
+                : "آخر أسبوعين. علّم على اللي فيه شغل أو فلوس:"}</p>
               <ul className="grid max-h-[420px] gap-2 overflow-y-auto">
                 {mails.map((m) => (
                   <li key={m.id}>
