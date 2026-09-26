@@ -21,6 +21,7 @@ model User {
   createdAt    DateTime @default(now())
   tasks        Task[]
   entries      Entry[]
+  gmail        GmailAccount?
 }
 
 model Task {
@@ -57,4 +58,15 @@ model Entry {
   createdAt  DateTime  @default(now())
 
   @@index([userId, kind])
+}
+
+// One connected Gmail per user, read-only. The refresh token is encrypted (lib/crypto.ts);
+// email content is never stored, only read when the user asks.
+model GmailAccount {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email        String
+  refreshToken String
+  createdAt    DateTime @default(now())
 }
