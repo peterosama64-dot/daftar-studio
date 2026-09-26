@@ -9,6 +9,7 @@ import { Button, btnClass } from "@/components/ui";
 import { PrintButton } from "@/components/print-button";
 import { QuoteDoc } from "@/components/docs";
 import { ShareBox } from "@/components/share-box";
+import { ConfirmButton } from "@/components/confirm-button";
 import { acceptQuote, deleteQuote, shareQuote, unshareQuote } from "../../actions";
 
 export const metadata = { title: "عرض سعر" };
@@ -45,11 +46,11 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
       )}
       <QuoteDoc no={no} created={q.createdAt} validUntil={validUntil(q.createdAt, q.validDays)} from={{ name: user?.name ?? null, email: user?.email ?? "" }}
         client={q.client} title={q.title} items={items} total={quoteTotal(items)} deliveryDays={q.deliveryDays} notes={q.notes} cur={cur.short} />
-      {q.status !== "accepted" && (
-        <form action={deleteQuote.bind(null, q.id)} className="mx-auto w-full max-w-2xl print:hidden">
-          <button className="text-sm font-medium text-risk">امسح العرض</button>
-        </form>
-      )}
+      <form action={deleteQuote.bind(null, q.id)} className="mx-auto flex w-full max-w-2xl flex-wrap items-center gap-2 print:hidden">
+        <ConfirmButton className="text-sm font-medium text-risk"
+          message={q.status === "accepted" ? "تمسح العرض؟ المهمة اللي اتعملت منه هتفضل زي ما هي." : "تمسح العرض ده؟"}>امسح العرض</ConfirmButton>
+        {q.status === "accepted" && <span className="text-[13px] text-muted">المهمة اللي اتعملت منه هتفضل زي ما هي.</span>}
+      </form>
     </>
   );
 }
