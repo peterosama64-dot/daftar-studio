@@ -63,6 +63,11 @@ export default async function Settings() {
         </Card>
         <NotifyCard />
         <Card className="p-5 lg:col-span-2">
+          <h2 className="text-lg font-bold">نسخة Excel</h2>
+          <p className="mb-3 text-sm text-muted">كل شغلك وفلوسك واشتراكاتك في ملف واحد، تفتحه بـ Excel أو Google Sheets. خليه نسخة احتياطية أو ابعته للمحاسب.</p>
+          <a href="/api/export" download className={btnClass("secondary", true)}>نزّل ملف Excel</a>
+        </Card>
+        <Card className="p-5 lg:col-span-2">
           <h2 className="text-lg font-bold">امسح كل بياناتي</h2>
           <p className="mb-3 text-sm text-muted">بيمسح كل المهام والفلوس. المسح نهائي ومش بيرجع. اكتب «امسح» في الخانة عشان تأكد.</p>
           <form action={deleteEverything} className="flex flex-wrap items-end gap-2">
