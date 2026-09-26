@@ -6,11 +6,13 @@ import { SESSION_COOKIE, verifySession } from "@/lib/session";
 export async function middleware(req: NextRequest) {
   const uid = await verifySession(req.cookies.get(SESSION_COOKIE)?.value);
   if (uid) return NextResponse.next();
-  if (req.nextUrl.pathname.startsWith("/api/")) {
+  // The Gmail connect/callback routes are browser navigations (to and from Google), not fetches.
+  const isNavigation = /^\/api\/gmail\/(connect|callback)$/.test(req.nextUrl.pathname);
+  if (req.nextUrl.pathname.startsWith("/api/") && !isNavigation) {
     return NextResponse.json({ error: "سجّل دخول الأول." }, { status: 401 });
   }
   const url = new URL("/login", req.url);
-  url.searchParams.set("next", req.nextUrl.pathname);
+  url.searchParams.set("next", isNavigation ? "/app/inbox" : req.nextUrl.pathname);
   return NextResponse.redirect(url);
 }
 

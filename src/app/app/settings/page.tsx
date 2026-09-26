@@ -13,7 +13,7 @@ export const metadata = { title: "الإعدادات" };
 
 export default async function Settings() {
   const uid = await requireUser();
-  const [cur, user, admin] = await Promise.all([getCurrency(uid), prisma.user.findUnique({ where: { id: uid }, select: { email: true, name: true } }), isAdmin(uid)]);
+  const [cur, user, admin, gmail] = await Promise.all([getCurrency(uid), prisma.user.findUnique({ where: { id: uid }, select: { email: true, name: true } }), isAdmin(uid), prisma.gmailAccount.findUnique({ where: { userId: uid }, select: { id: true } })]);
   const row = (name: string, desc: string, right: React.ReactNode) => (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule py-4 last:border-b-0">
       <div className="min-w-0"><div className="font-display font-semibold">{name}</div><p className="text-sm text-muted">{desc}</p></div>
@@ -48,7 +48,7 @@ export default async function Settings() {
         <Card className="p-5">
           <h2 className="text-lg font-bold">الربط</h2>
           {row("الترتيب الذكي", "بيحوّل كلامك ورسايل العملاء لمهام ومبالغ، ويكتب تقرير الشهر.", aiEnabled() ? <Pill tone="money">{`شغال · ${aiName()}`}</Pill> : <Pill tone="waiting">مش متفعّل</Pill>)}
-          {row("Gmail", "قراءة الإيميلات وإيصالات الاشتراكات.", <Pill>المرحلة الجاية</Pill>)}
+          {row("Gmail", "قراءة الإيميلات وإيصالات الاشتراكات، من صفحة «الرسايل».", gmail ? <Pill tone="money">متوصّل</Pill> : <Link href="/app/inbox" className={btnClass("secondary", true)}>اربطه</Link>)}
           {row("واتساب", "مفيش ربط مباشر. صدّر الشات والزقه في «الرسايل».", <Pill>يدوي</Pill>)}
         </Card>
         <Card className="p-5 lg:col-span-2">

@@ -124,3 +124,11 @@ describe("heuristic parser on a WhatsApp export", () => {
     expect(heuristicParse("بوستر مكتبة الكرمة بكرة", today).tasks).toHaveLength(1);
   });
 });
+
+describe("heuristic parser on emails from the Gmail panel", () => {
+  it("reads bodies, not header lines", () => {
+    const p = heuristicParse("From: Cafe <c@x.com>\nSubject: Your receipt\nDate: Fri\n\nعايزين بوستر الخميس\n\n———\n\nFrom: Adobe\nSubject: Receipt\n\nجددت اشتراك Adobe بـ 720", new Date(2026, 8, 25));
+    expect(p.tasks.map((t) => t.title)).toEqual(["عايزين بوستر"]);
+    expect(p.subscriptions[0]?.amount).toBe(720);
+  });
+});

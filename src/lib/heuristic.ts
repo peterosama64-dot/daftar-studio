@@ -79,7 +79,12 @@ function chatMessages(text: string): { from: string; body: string }[] | null {
 export function heuristicParse(text: string, today = new Date()): Parsed {
   const out = emptyParsed();
   const chat = chatMessages(text);
-  if (!chat) { parseInto(out, text, today, false, ""); return out; }
+  if (!chat) {
+    // Emails from the Gmail panel arrive with header lines and ——— separators: keep only the bodies.
+    const plain = text.split(/\r?\n/).filter((l) => !/^(From|Date|To|Cc|Subject):\s/i.test(l) && !/^[—-]{3,}\s*$/.test(l)).join("\n");
+    parseInto(out, plain, today, false, "");
+    return out;
+  }
   // In a chat the client is whoever sent the message (not you).
   for (const m of chat) parseInto(out, m.body, today, true, ME.test(m.from) ? "" : m.from.slice(0, 60));
   return out;
