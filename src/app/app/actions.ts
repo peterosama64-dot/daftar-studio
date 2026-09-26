@@ -177,6 +177,14 @@ export async function setCurrency(f: FormData) {
   done();
 }
 
+/** Monthly income goal; an empty field removes it. */
+export async function setGoal(f: FormData) {
+  const userId = await requireUser();
+  const g = num(f, "goal");
+  await prisma.user.update({ where: { id: userId }, data: { incomeGoal: g && g > 0 ? g : null } });
+  done();
+}
+
 /** The name shown on invoices. */
 export async function setName(f: FormData) {
   const userId = await requireUser();
