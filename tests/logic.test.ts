@@ -179,3 +179,15 @@ describe("quotes", () => {
     expect(quoteNotes("Q-1", [{ desc: "لوجو", amount: 3000 }], 7, "")).toBe("من عرض السعر Q-1:\n- لوجو: 3000\nمدة التسليم: 7 يوم");
   });
 });
+
+import { goalProgress } from "../src/lib/goal";
+describe("income goal", () => {
+  const today = new Date(2026, 8, 26); // 26 Sep: 5 days left including today
+  it("says how much is left per day this month", () => {
+    expect(goalProgress(10000, 15000, "2026-09", today)).toEqual({ pct: 67, left: 5000, reached: false, current: true, daysLeft: 5, perDay: 1000 });
+  });
+  it("reports reached, and past months without per-day advice", () => {
+    expect(goalProgress(16000, 15000, "2026-09", today)).toMatchObject({ pct: 107, left: 0, reached: true, perDay: 0 });
+    expect(goalProgress(9000, 15000, "2026-08", today)).toMatchObject({ reached: false, current: false, daysLeft: 0, perDay: 0, left: 6000 });
+  });
+});

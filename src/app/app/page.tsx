@@ -1,6 +1,8 @@
 import { requireUser } from "@/lib/auth";
 import { Capture } from "@/components/capture";
 import { MoneyStrip } from "@/components/money-strip";
+import { GoalCard } from "@/components/goal-card";
+import { prisma } from "@/lib/db";
 import { TaskCard } from "@/components/task-card";
 import { PageHead } from "@/components/month";
 import { Empty, Pill, SectionHead } from "@/components/ui";
@@ -11,7 +13,10 @@ import { fmt } from "@/lib/money";
 export default async function Home({ searchParams }: { searchParams: SP }) {
   const uid = await requireUser();
   const month = await monthFrom(searchParams);
-  const { today, urgent, tasks, entries, totals, cur } = await loadMonth(month, uid);
+  const [{ today, urgent, tasks, entries, totals, cur }, user] = await Promise.all([
+    loadMonth(month, uid),
+    prisma.user.findUnique({ where: { id: uid }, select: { incomeGoal: true } }),
+  ]);
   const h = today.getHours();
   const greet = h < 12 ? "صباح الخير" : "مساء الخير";
 
@@ -25,6 +30,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
       <PageHead title={greet} base="/app" month={month}
         sub={`${AR_DAYS[today.getDay()]} ${today.getDate()} ${AR_MONTHS[today.getMonth()]}${urgent.length ? ` · عندك ${urgent.length} ${urgent.length === 1 ? "حاجة مستعجلة" : "حاجات مستعجلة"}` : ""}`} />
       <MoneyStrip I={totals.I} S={totals.S} X={totals.X} net={totals.net} cur={cur.short} />
+      <GoalCard income={totals.I} goal={user?.incomeGoal ?? null} month={month} today={today} cur={cur.short} />
       <Capture />
       {!tasks.length && !entries.length && (
         <Empty>الدفتر لسه فاضي. قول أو اكتب أول حاجة فوق، زي «لازم أسلّم البوستر السبت، واستلمت ٣٠٠٠ من العميل».</Empty>
