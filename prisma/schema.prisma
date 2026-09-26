@@ -31,25 +31,30 @@ model User {
 }
 
 model Task {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title       String
-  client      String    @default("")
-  due         DateTime?
-  priority    String    @default("normal") // high | normal | low
-  status      String    @default("todo") // todo | doing | done
-  source      String    @default("manual") // manual | voice | gmail | chat
-  notes       String    @default("")
-  agreed      Float?
-  paid        Float?
-  doneAt      DateTime?
-  timeSpent   Int       @default(0) // seconds tracked with the timer
-  timerStart  DateTime? // set while the timer runs
-  shareToken  String?   @unique // public invoice link
-  recurringId String? // made by a RecurringJob
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id               String     @id @default(cuid())
+  userId           String
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String
+  client           String     @default("")
+  due              DateTime?
+  priority         String     @default("normal") // high | normal | low
+  status           String     @default("todo") // todo | doing | done
+  source           String     @default("manual") // manual | voice | gmail | chat
+  notes            String     @default("")
+  agreed           Float?
+  paid             Float?
+  doneAt           DateTime?
+  timeSpent        Int        @default(0) // seconds tracked with the timer
+  timerStart       DateTime? // set while the timer runs
+  shareToken       String?    @unique // public invoice link
+  recurringId      String? // made by a RecurringJob
+  reviewToken      String?    @unique // public link where the client reviews the delivered files
+  revisionsAllowed Int? // revisions included in the price; more are extra
+  approvedAt       DateTime? // client approved the delivered work
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  deliveries       Delivery[]
+  revisions        Revision[]
 
   @@index([userId, status])
 }
@@ -133,4 +138,33 @@ model RecurringJob {
   createdAt  DateTime @default(now())
 
   @@index([userId])
+}
+
+// A file delivered on a task (stored in Vercel Blob). `round` = 1 for the first delivery, +1 after each revision.
+model Delivery {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  url       String
+  name      String
+  type      String
+  size      Int
+  round     Int      @default(1)
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+}
+
+// A revision request on a task, from the client (review link) or logged by the owner.
+model Revision {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  note      String   @default("")
+  by        String   @default("owner") // owner | client
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
 }
