@@ -94,4 +94,20 @@ describe("gmail", () => {
     expect(await recentMail("u3")).toBe("reconnect");
     expect(rows.has("u3")).toBe(false);
   });
+  it("searches receipts with a separate query", async () => {
+    rows.set("u2", { userId: "u2", email: "me@gmail.com", refreshToken: seal("rt2") });
+    let q = "", max = "";
+    vi.stubGlobal("fetch", vi.fn(async (u: any) => {
+      const url = String(u);
+      if (url.startsWith("https://oauth2.googleapis.com/token")) return json({ access_token: "at" });
+      if (url.includes("/messages?")) { const p = new URL(url).searchParams; q = p.get("q")!; max = p.get("maxResults")!; return json({}); }
+      throw new Error("unexpected " + url);
+    }));
+    expect(await recentMail("u2", 20, "receipts")).toEqual([]);
+    expect(q).toContain("newer_than:90d");
+    expect(q).toContain("receipt");
+    expect(q).toContain("فاتورة");
+    expect(q).not.toContain("-category:promotions");
+    expect(max).toBe("20");
+  });
 });
