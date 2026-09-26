@@ -8,13 +8,13 @@ export async function middleware(req: NextRequest) {
   if (req.nextUrl.pathname === "/api/cron/reminders") return NextResponse.next();
   const uid = await verifySession(req.cookies.get(SESSION_COOKIE)?.value);
   if (uid) return NextResponse.next();
-  // The Gmail connect/callback routes are browser navigations (to and from Google), not fetches.
-  const isNavigation = /^\/api\/gmail\/(connect|callback)$/.test(req.nextUrl.pathname);
+  // Gmail connect/callback (to and from Google) and the Excel download are browser navigations, not fetches.
+  const isNavigation = /^\/api\/(gmail\/(connect|callback)|export)$/.test(req.nextUrl.pathname);
   if (req.nextUrl.pathname.startsWith("/api/") && !isNavigation) {
     return NextResponse.json({ error: "سجّل دخول الأول." }, { status: 401 });
   }
   const url = new URL("/login", req.url);
-  url.searchParams.set("next", isNavigation ? "/app/inbox" : req.nextUrl.pathname);
+  url.searchParams.set("next", req.nextUrl.pathname === "/api/export" ? "/app/settings" : isNavigation ? "/app/inbox" : req.nextUrl.pathname);
   return NextResponse.redirect(url);
 }
 
