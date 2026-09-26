@@ -352,3 +352,30 @@ export async function unshareReview(taskId: string) {
   await prisma.task.updateMany({ where: { id: taskId, userId }, data: { reviewToken: null } });
   taskPath(taskId);
 }
+
+// ---------- checklist ----------
+export async function addSubtask(taskId: string, f: FormData) {
+  const userId = await requireUser();
+  const titles = str(f, "title", 2000).split("\n").map((x) => x.trim().slice(0, 200)).filter(Boolean).slice(0, 30);
+  const t = await prisma.task.findFirst({ where: { id: taskId, userId }, select: { id: true, _count: { select: { subtasks: true } } } });
+  if (!t || !titles.length || t._count.subtasks + titles.length > 60) return;
+  await prisma.subtask.createMany({ data: titles.map((title, i) => ({ taskId, userId, title, position: t._count.subtasks + i })) });
+  taskPath(taskId);
+}
+
+export async function toggleSubtask(id: string) {
+  const userId = await requireUser();
+  const s = await prisma.subtask.findFirst({ where: { id, userId } });
+  if (!s) return;
+  await prisma.subtask.updateMany({ where: { id, userId }, data: { done: !s.done } });
+  taskPath(s.taskId);
+  revalidatePath("/app", "layout");
+}
+
+export async function deleteSubtask(id: string) {
+  const userId = await requireUser();
+  const s = await prisma.subtask.findFirst({ where: { id, userId }, select: { taskId: true } });
+  if (!s) return;
+  await prisma.subtask.deleteMany({ where: { id, userId } });
+  taskPath(s.taskId);
+}

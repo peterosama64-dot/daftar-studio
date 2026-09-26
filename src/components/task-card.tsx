@@ -6,7 +6,7 @@ import { daysUntil, shortDate } from "@/lib/dates";
 import { SOURCE_LABEL, type Source } from "@/lib/constants";
 import { toggleTask, togglePriority, deleteTask } from "@/app/app/actions";
 
-export function TaskCard({ t, today, compact }: { t: Task; today: Date; compact?: boolean }) {
+export function TaskCard({ t, today, compact }: { t: Task & { subtasks?: { done: boolean }[] }; today: Date; compact?: boolean }) {
   const done = t.status === "done";
   const d = daysUntil(t.due, today);
   const stripe = done ? "bg-money" : t.priority === "high" || (d !== null && d <= 2) ? "bg-risk" : d !== null && d <= 5 ? "bg-wait" : "bg-cyan";
@@ -29,6 +29,7 @@ export function TaskCard({ t, today, compact }: { t: Task; today: Date; compact?
               {tone.tone === "later" && t.due && <Pill mono>{shortDate(t.due)}</Pill>}
               {t.priority === "high" && !done && <Pill tone="urgent">مستعجل</Pill>}
               {t.client && <Pill tone="later">{t.client}</Pill>}
+              {!!t.subtasks?.length && <Pill mono tone={t.subtasks.every((x) => x.done) ? "money" : "neutral"}>{`${t.subtasks.filter((x) => x.done).length}/${t.subtasks.length}`}</Pill>}
               {src && <Pill>{src}</Pill>}
             </div>
           )}
