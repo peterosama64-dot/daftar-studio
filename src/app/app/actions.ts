@@ -160,6 +160,13 @@ export async function setCurrency(f: FormData) {
   done();
 }
 
+/** The name shown on invoices. */
+export async function setName(f: FormData) {
+  const userId = await requireUser();
+  await prisma.user.update({ where: { id: userId }, data: { name: str(f, "name", 80) } });
+  done();
+}
+
 export async function deleteEverything(f: FormData) {
   const userId = await requireUser();
   if (str(f, "confirm") !== "امسح") return;

@@ -6,7 +6,7 @@ import { currencyShort } from "@/lib/data";
 import { dayKey } from "@/lib/dates";
 import { fmt } from "@/lib/money";
 import { SOURCE_LABEL, type Source } from "@/lib/constants";
-import { Button, Card, Field, inputClass } from "@/components/ui";
+import { Button, Card, Field, btnClass, inputClass } from "@/components/ui";
 import { updateTask, deleteTaskAndReturn } from "../../actions";
 
 export default async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -53,6 +53,7 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
           {SOURCE_LABEL[t.source as Source] && <p className="text-[13px] text-muted">جاية {SOURCE_LABEL[t.source as Source]}</p>}
           <div className="flex items-center justify-between gap-3">
             <Button>احفظ</Button>
+            {t.agreed ? <Link href={`/app/tasks/${t.id}/invoice`} className={btnClass("secondary", true)}>اعمل فاتورة</Link> : null}
           </div>
         </form>
         <form action={deleteTaskAndReturn.bind(null, t.id)}>
