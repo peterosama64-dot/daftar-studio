@@ -7,6 +7,7 @@ import { Brand, MicIcon } from "./ui";
 const ITEMS = [
   { href: "/app", label: "الرئيسية" },
   { href: "/app/tasks", label: "الشغل" },
+  { href: "/app/calendar", label: "التقويم" },
   { href: "/app/quotes", label: "عروض الأسعار" },
   { href: "/app/money", label: "الفلوس" },
   { href: "/app/inbox", label: "الرسايل" },
@@ -14,7 +15,7 @@ const ITEMS = [
   { href: "/app/clients", label: "العملاء" },
   { href: "/app/settings", label: "الإعدادات" },
 ];
-const MORE = ["/app/quotes", "/app/inbox", "/app/report", "/app/clients", "/app/settings", "/app/more"];
+const MORE = ["/app/calendar", "/app/quotes", "/app/inbox", "/app/report", "/app/clients", "/app/settings", "/app/more"];
 
 const isActive = (path: string, href: string) => (href === "/app" ? path === "/app" : path.startsWith(href));
 
