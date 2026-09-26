@@ -233,3 +233,22 @@ describe("monthly jobs", () => {
     expect(await runRecurring(db, new Date(2026, 10, 1))).toBe(1); // next month
   });
 });
+
+import { formatDuration, hourlyRate, trackedSeconds } from "../src/lib/timer";
+describe("task timer", () => {
+  it("adds a running session", () => {
+    const start = new Date(2026, 8, 26, 10, 0, 0);
+    expect(trackedSeconds(600, start, new Date(2026, 8, 26, 10, 30, 5))).toBe(600 + 1805);
+    expect(trackedSeconds(600, null)).toBe(600);
+  });
+  it("formats hours and minutes", () => {
+    expect(formatDuration(0)).toBe("0 د");
+    expect(formatDuration(45 * 60 + 59)).toBe("45 د");
+    expect(formatDuration(2 * 3600 + 5 * 60)).toBe("2 س 05 د");
+  });
+  it("earns per hour only with an amount and 15+ minutes", () => {
+    expect(hourlyRate(3000, 2 * 3600)).toBe(1500);
+    expect(hourlyRate(3000, 10 * 60)).toBeNull();
+    expect(hourlyRate(null, 3600)).toBeNull();
+  });
+});

@@ -7,7 +7,8 @@ import { dayKey } from "@/lib/dates";
 import { fmt } from "@/lib/money";
 import { SOURCE_LABEL, type Source } from "@/lib/constants";
 import { Button, Card, Field, btnClass, inputClass } from "@/components/ui";
-import { updateTask, deleteTaskAndReturn } from "../../actions";
+import { updateTask, deleteTaskAndReturn, startTimer, stopTimer } from "../../actions";
+import { TimerCard } from "@/components/timer-card";
 
 export default async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -19,6 +20,8 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
     <>
       <Link href="/app/tasks" className="text-sm text-cyan">› رجوع للشغل</Link>
       <Card className="mx-auto grid w-full max-w-2xl gap-5 p-5 lg:p-7">
+        <TimerCard timeSpent={t.timeSpent} timerStart={t.timerStart?.toISOString() ?? null} agreed={t.agreed} cur={cur.short}
+          start={startTimer.bind(null, t.id)} stop={stopTimer.bind(null, t.id)} />
         <form action={updateTask.bind(null, t.id)} className="grid gap-4">
           <Field label="المهمة"><input name="title" defaultValue={t.title} required className={inputClass} /></Field>
           <fieldset className="grid grid-cols-3 gap-1 rounded-[10px] bg-sunken p-1">

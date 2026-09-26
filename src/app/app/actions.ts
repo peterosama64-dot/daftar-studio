@@ -278,3 +278,26 @@ export async function deleteRecurring(id: string) {
   await prisma.recurringJob.deleteMany({ where: { id, userId } });
   done();
 }
+
+// ---------- timer ----------
+/** Start this task's timer; any other running timer of the user is stopped first (one at a time). */
+export async function startTimer(id: string) {
+  const userId = await requireUser();
+  const running = await prisma.task.findMany({ where: { userId, timerStart: { not: null }, NOT: { id } }, select: { id: true } });
+  for (const r of running) await stopFor(userId, r.id);
+  await prisma.task.updateMany({ where: { id, userId, timerStart: null }, data: { timerStart: new Date() } });
+  done();
+}
+
+export async function stopTimer(id: string) {
+  await stopFor(await requireUser(), id);
+  done();
+}
+
+/** Add the running session to timeSpent. Conditional on the same start, so a double stop adds it once. */
+async function stopFor(userId: string, id: string) {
+  const t = await prisma.task.findFirst({ where: { id, userId }, select: { timerStart: true } });
+  if (!t?.timerStart) return;
+  const sec = Math.max(0, Math.floor((Date.now() - t.timerStart.getTime()) / 1000));
+  await prisma.task.updateMany({ where: { id, userId, timerStart: t.timerStart }, data: { timerStart: null, timeSpent: { increment: sec } } });
+}

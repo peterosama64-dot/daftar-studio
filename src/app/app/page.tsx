@@ -2,6 +2,9 @@ import { requireUser } from "@/lib/auth";
 import { Capture } from "@/components/capture";
 import { MoneyStrip } from "@/components/money-strip";
 import { GoalCard } from "@/components/goal-card";
+import Link from "next/link";
+import { stopTimer } from "./actions";
+import { Button } from "@/components/ui";
 import { prisma } from "@/lib/db";
 import { TaskCard } from "@/components/task-card";
 import { PageHead } from "@/components/month";
@@ -17,6 +20,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
     loadMonth(month, uid),
     prisma.user.findUnique({ where: { id: uid }, select: { incomeGoal: true } }),
   ]);
+  const running = tasks.find((t) => t.timerStart);
   const h = today.getHours();
   const greet = h < 12 ? "صباح الخير" : "مساء الخير";
 
@@ -29,6 +33,12 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
     <>
       <PageHead title={greet} base="/app" month={month}
         sub={`${AR_DAYS[today.getDay()]} ${today.getDate()} ${AR_MONTHS[today.getMonth()]}${urgent.length ? ` · عندك ${urgent.length} ${urgent.length === 1 ? "حاجة مستعجلة" : "حاجات مستعجلة"}` : ""}`} />
+      {running && (
+        <section aria-label="تايمر شغال" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-cyan bg-cyan-soft px-5 py-3">
+          <Link href={`/app/tasks/${running.id}`} className="min-w-0 flex-1 hover:text-cyan"><span className="text-sm text-muted">شغال دلوقتي على </span><b className="[overflow-wrap:anywhere]">{running.title}</b></Link>
+          <form action={stopTimer.bind(null, running.id)}><Button small>وقّف التايمر</Button></form>
+        </section>
+      )}
       <MoneyStrip I={totals.I} S={totals.S} X={totals.X} net={totals.net} cur={cur.short} />
       <GoalCard income={totals.I} goal={user?.incomeGoal ?? null} month={month} today={today} cur={cur.short} />
       <Capture />
