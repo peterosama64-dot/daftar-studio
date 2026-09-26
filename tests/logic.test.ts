@@ -252,3 +252,29 @@ describe("task timer", () => {
     expect(hourlyRate(null, 3600)).toBeNull();
   });
 });
+
+import { yearSummary } from "../src/lib/year";
+describe("year report", () => {
+  it("adds up months, clients, subscriptions and work", () => {
+    const e = (kind: string, amount: number, date: Date | null, client = "", startMonth: string | null = null, endMonth: string | null = null, name = kind) =>
+      ({ kind, name, client, amount, date, startMonth, endMonth });
+    const y = yearSummary([
+      e("income", 4000, new Date(2026, 0, 10), "سكر"), e("income", 3000, new Date(2026, 5, 3), "نون"), e("income", 2000, new Date(2026, 5, 20), "سكر"),
+      e("income", 9999, new Date(2025, 11, 31), "قديم"), e("expense", 500, new Date(2026, 5, 4)),
+      e("subscription", 900, null, "", "2025-06", null, "Adobe"), e("subscription", 300, null, "", "2026-03", "2026-05", "Envato"),
+    ], [
+      { status: "done", doneAt: new Date(2026, 5, 1), timeSpent: 5400 }, { status: "done", doneAt: new Date(2025, 5, 1), timeSpent: 0 }, { status: "todo", doneAt: null, timeSpent: 1800 },
+    ], 2026);
+    expect(y.I).toBe(9000);
+    expect(y.S).toBe(900 * 12 + 300 * 3);
+    expect(y.X).toBe(500);
+    expect(y.months[5]).toMatchObject({ k: "2026-06", I: 5000, X: 500 });
+    expect(y.clients).toEqual([["سكر", 6000], ["نون", 3000]]);
+    expect(y.subs).toEqual([{ name: "Adobe", months: 12, total: 10800 }, { name: "Envato", months: 3, total: 900 }]);
+    expect(y).toMatchObject({ done: 1, hours: 2, best: "2026-06", activeMonths: 2 });
+    // Mid-year: months that haven't happened yet cost nothing.
+    const mid = yearSummary([e("subscription", 900, null, "", "2025-06", null, "Adobe")], [], 2026, "2026-09");
+    expect(mid.S).toBe(900 * 9);
+    expect(mid.subs[0].months).toBe(9);
+  });
+});

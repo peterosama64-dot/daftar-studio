@@ -3,7 +3,8 @@ import { PageHead } from "@/components/month";
 import { Card } from "@/components/ui";
 import { AiReport } from "@/components/ai-report";
 import { PrintButton } from "@/components/print-button";
-import { Brand } from "@/components/ui";
+import Link from "next/link";
+import { Brand, btnClass } from "@/components/ui";
 import { loadMonth, monthFrom, type SP } from "@/lib/data";
 import { reportFacts, plainReport } from "@/lib/report";
 import { incomeByClient, fmt, signed } from "@/lib/money";
@@ -32,6 +33,7 @@ export default async function Report({ searchParams }: { searchParams: SP }) {
         <span className="text-sm text-muted">{new Date().toLocaleDateString("ar-EG-u-nu-latn", { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Cairo" })}</span>
       </div>
       <PageHead title={`تقرير ${monthName(month)}`} base="/app/report" month={month}>
+        <Link href={`/app/report/year?y=${month.slice(0, 4)}`} className={`${btnClass("ghost", true)} print:hidden`}>تقرير السنة</Link>
         <PrintButton file={`تقرير-دفتر-الاستوديو-${month}`} />
       </PageHead>
       <div className="grid items-start gap-5 lg:grid-cols-[1.2fr_1fr] print:grid-cols-1 print:gap-3">
