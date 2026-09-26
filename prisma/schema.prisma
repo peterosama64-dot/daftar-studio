@@ -22,6 +22,8 @@ model User {
   tasks        Task[]
   entries      Entry[]
   gmail        GmailAccount?
+  push         PushSubscription[]
+  lastDigest   String? // "YYYY-MM-DD" of the last morning reminder, so the daily job never sends twice
 }
 
 model Task {
@@ -69,4 +71,23 @@ model GmailAccount {
   email        String
   refreshToken String
   createdAt    DateTime @default(now())
+}
+
+// A browser/phone that asked for reminder notifications (Web Push).
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// App-wide values generated on first use (the Web Push key pair). Secret values are sealed (lib/crypto.ts).
+model AppSetting {
+  key   String @id
+  value String
 }

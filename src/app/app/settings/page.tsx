@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth";
 import { logout } from "@/app/(auth)/actions";
 import { aiEnabled, aiName } from "@/lib/ai";
 import { isAdmin } from "@/lib/admin";
+import { NotifyCard } from "@/components/notify-card";
 import { setCurrency, deleteEverything } from "../actions";
 
 export const metadata = { title: "الإعدادات" };
@@ -51,6 +52,7 @@ export default async function Settings() {
           {row("Gmail", "قراءة الإيميلات وإيصالات الاشتراكات، من صفحة «الرسايل».", gmail ? <Pill tone="money">متوصّل</Pill> : <Link href="/app/inbox" className={btnClass("secondary", true)}>اربطه</Link>)}
           {row("واتساب", "مفيش ربط مباشر. صدّر الشات والزقه في «الرسايل».", <Pill>يدوي</Pill>)}
         </Card>
+        <NotifyCard />
         <Card className="p-5 lg:col-span-2">
           <h2 className="text-lg font-bold">امسح كل بياناتي</h2>
           <p className="mb-3 text-sm text-muted">بيمسح كل المهام والفلوس. المسح نهائي ومش بيرجع. اكتب «امسح» في الخانة عشان تأكد.</p>
