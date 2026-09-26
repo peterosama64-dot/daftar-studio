@@ -25,7 +25,7 @@ export function Sidebar() {
   const path = usePathname();
   const m = useSearchParams().get("m");
   return (
-    <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-8 border-l border-rule bg-sheet px-4 py-7 lg:flex">
+    <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-8 border-l border-rule bg-sheet px-4 py-7 lg:flex print:hidden">
       <Brand href="/app" />
       <nav className="grid gap-0.5" aria-label="الأقسام">
         {ITEMS.map((i) => {
@@ -52,7 +52,7 @@ export function TabBar() {
     </Link>
   );
   return (
-    <nav aria-label="الأقسام" className="fixed inset-x-0 bottom-0 z-30 flex items-end gap-1 border-t border-rule bg-sheet px-3 pt-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+14px)] lg:hidden">
+    <nav aria-label="الأقسام" className="fixed inset-x-0 bottom-0 z-30 flex items-end gap-1 border-t border-rule bg-sheet px-3 pt-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+14px)] lg:hidden print:hidden">
       {tab("/app", "الرئيسية", path === "/app")}
       {tab("/app/tasks", "الشغل", path.startsWith("/app/tasks"))}
       <Link href={withMonth("/app", m) + "#capture"} aria-label="سجّل بصوتك"

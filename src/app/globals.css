@@ -11,7 +11,7 @@
   --on-accent: #ffffff;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
+@media screen and (prefers-color-scheme: dark) {
   :root {
     --paper: #111215; --sheet: #18191e; --sunken: #0c0d10; --selected: #13262b;
     --ink: #eeedf0; --ink2: #c9c9d0; --muted: #9a9ca7; --rule: #2b2d35;
@@ -54,3 +54,11 @@ h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; }
 .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }
 :focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* Printing / "Save as PDF": always the light palette, no app chrome, colours kept. */
+@page { size: A4; margin: 14mm; }
+@media print {
+  html, body { background: #fff; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .shadow-float { box-shadow: none; }
+}
