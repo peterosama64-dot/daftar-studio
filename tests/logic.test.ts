@@ -310,3 +310,15 @@ describe("client contact", () => {
   });
 });
 
+
+import { clock, nextPhase } from "../src/lib/focus";
+describe("focus mode", () => {
+  it("counts down and moves work → rest → idle", () => {
+    expect(clock(25 * 60_000)).toBe("25:00");
+    expect(clock(61_500)).toBe("01:02");
+    expect(clock(-5)).toBe("00:00");
+    const w = { taskId: "t", phase: "work" as const, endsAt: 0, plan: { work: 25, rest: 5 } };
+    expect(nextPhase(w, 1000)).toEqual({ ...w, phase: "rest", endsAt: 1000 + 5 * 60_000 });
+    expect(nextPhase({ ...w, phase: "rest" }, 1000)).toBeNull();
+  });
+});
