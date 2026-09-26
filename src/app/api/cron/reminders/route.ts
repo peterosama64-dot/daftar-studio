@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { dayKey, now } from "@/lib/dates";
-import { buildDigest } from "@/lib/reminders";
+import { dayKey, monthName, now, shiftMonth, monthKey } from "@/lib/dates";
+import { monthTotals } from "@/lib/money";
+import { buildDigest, buildMonthly } from "@/lib/reminders";
 import { owedByClient } from "@/lib/owed";
 import { CURRENCIES } from "@/lib/constants";
 import { pushToUser } from "@/lib/push";
@@ -42,5 +43,22 @@ export async function GET(req: Request) {
     if (!digest) { quiet++; continue; }
     if ((await pushToUser(u.id, { title: digest.title, body: digest.body, url: "/app/tasks" })).sent) sent++;
   }
-  return NextResponse.json({ day: key, users: users.length, sent, quiet });
+  // On the 1st, everyone with notifications also gets last month's summary, once (claimed by month).
+  let monthly = 0;
+  if (today.getDate() === 1) {
+    const prev = shiftMonth(monthKey(today), -1);
+    const all = await prisma.user.findMany({
+      where: { push: { some: {} }, OR: [{ lastMonthly: null }, { lastMonthly: { not: prev } }] },
+      select: { id: true, currency: true, incomeGoal: true },
+    });
+    for (const u of all) {
+      const claimed = await prisma.user.updateMany({ where: { id: u.id, OR: [{ lastMonthly: null }, { lastMonthly: { not: prev } }] }, data: { lastMonthly: prev } });
+      if (!claimed.count) continue;
+      const entries = await prisma.entry.findMany({ where: { userId: u.id } });
+      const currency = CURRENCIES.find((c) => c.code === u.currency)?.short ?? "ج.م";
+      const m = buildMonthly(monthName(prev), monthTotals(entries, prev), u.incomeGoal, currency);
+      if (m && (await pushToUser(u.id, { ...m, url: `/app/report?m=${prev}`, tag: "daftar-monthly" })).sent) monthly++;
+    }
+  }
+  return NextResponse.json({ day: key, users: users.length, sent, quiet, monthly });
 }

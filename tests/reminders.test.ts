@@ -3,7 +3,8 @@ vi.mock("server-only", () => ({}));
 
 // In-memory prisma for users, tasks, push subscriptions and app settings.
 const db = vi.hoisted(() => ({
-  users: new Map<string, { id: string; lastDigest: string | null }>(),
+  users: new Map<string, { id: string; lastDigest: string | null; lastMonthly?: string | null; incomeGoal?: number | null }>(),
+  entries: [] as { userId: string; kind: string; name: string; client: string; amount: number; date: Date | null; startMonth: string | null; endMonth: string | null }[],
   tasks: [] as { userId: string; title: string; client: string; due: Date | null; status: string; agreed?: number; paid?: number }[],
   subs: [] as { id: string; userId: string; endpoint: string; p256dh: string; auth: string }[],
   settings: new Map<string, string>(),
@@ -13,11 +14,17 @@ vi.mock("../src/lib/db", () => {
   return {
     prisma: {
       user: {
-        findMany: async ({ where }: any) => [...db.users.values()].filter((u) => db.subs.some((s) => s.userId === u.id) && notToday(u, where.OR[1].lastDigest.not)).map((u) => ({ id: u.id, currency: "EGP" })),
+        // Two claims share this mock: the daily digest (lastDigest) and the monthly summary (lastMonthly).
+        findMany: async ({ where }: any) => {
+          const f = where.OR[1].lastDigest ? "lastDigest" : "lastMonthly";
+          return [...db.users.values()].filter((u) => db.subs.some((s) => s.userId === u.id) && ((u as any)[f] ?? null) !== where.OR[1][f].not)
+            .map((u) => ({ id: u.id, currency: "EGP", incomeGoal: u.incomeGoal ?? null }));
+        },
         updateMany: async ({ where, data }: any) => {
-          const u = db.users.get(where.id);
-          if (!u || !notToday(u, where.OR[1].lastDigest.not)) return { count: 0 };
-          u.lastDigest = data.lastDigest; return { count: 1 };
+          const u = db.users.get(where.id) as any;
+          const f = where.OR[1].lastDigest ? "lastDigest" : "lastMonthly";
+          if (!u || (u[f] ?? null) === where.OR[1][f].not) return { count: 0 };
+          u[f] = data[f]; return { count: 1 };
         },
       },
       task: {
@@ -25,6 +32,7 @@ vi.mock("../src/lib/db", () => {
           ? db.tasks.filter((t) => t.userId === where.userId && (t.agreed ?? 0) > where.agreed.gt).map((t, i) => ({ id: String(i), ...t }))
           : db.tasks.filter((t) => t.userId === where.userId && t.status !== "done" && t.due && t.due < where.due.lt),
       },
+      entry: { findMany: async ({ where }: any) => db.entries.filter((e) => e.userId === where.userId) },
       pushSubscription: {
         findMany: async ({ where }: any) => db.subs.filter((s) => s.userId === where.userId),
         deleteMany: async ({ where }: any) => { db.subs = db.subs.filter((s) => s.id !== where.id); return { count: 1 }; },
@@ -38,7 +46,7 @@ vi.mock("../src/lib/db", () => {
   };
 });
 
-import { buildDigest } from "../src/lib/reminders";
+import { buildDigest, buildMonthly } from "../src/lib/reminders";
 import { GET as cron } from "../src/app/api/cron/reminders/route";
 import { dayKey, now } from "../src/lib/dates";
 
@@ -101,9 +109,17 @@ describe("buildDigest", () => {
   });
 });
 
+describe("buildMonthly", () => {
+  it("summarises the month, handles a loss and the goal", () => {
+    expect(buildMonthly("أغسطس 2026", { I: 2500, S: 3550, X: 7200, net: -8250 }, 5000, "ج.م")!.body).toBe("دخلك 2,500 ج.م، وصرفت 10,750، فخسارة 8,250 ج.م. كان فاضل 2,500 على الهدف.");
+    expect(buildMonthly("سبتمبر 2026", { I: 16000, S: 0, X: 0, net: 16000 }, 15000, "ج.م")!.body).toContain("وصلت لهدف الشهر.");
+    expect(buildMonthly("سبتمبر 2026", { I: 0, S: 0, X: 0, net: 0 }, null, "ج.م")).toBeNull();
+  });
+});
+
 describe("daily reminder job", () => {
   beforeEach(() => {
-    db.users.clear(); db.tasks = []; db.subs = []; received.length = 0; status = 201;
+    db.users.clear(); db.tasks = []; db.entries = []; db.subs = []; received.length = 0; status = 201;
     db.users.set("u1", { id: "u1", lastDigest: null });
     db.users.set("u2", { id: "u2", lastDigest: null });
     db.subs.push({ id: "s1", userId: "u1", endpoint: `${base}/push/one`, p256dh, auth });
@@ -143,6 +159,24 @@ describe("daily reminder job", () => {
       vi.setSystemTime(new Date("2026-10-04T07:00:00Z")); // Sunday in Cairo; tasks now overdue
       await cron(new Request("http://x/api/cron/reminders"));
       expect(u1()).toContain("ليك 2,000 ج.م عند عميل");
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("sends last month's summary on the 1st, once, linking to that report", async () => {
+    const e = (kind: string, amount: number, date: Date | null, startMonth: string | null = null) => ({ userId: "u1", kind, name: kind, client: "", amount, date, startMonth, endMonth: null });
+    db.entries.push(e("income", 12000, new Date(2026, 8, 10)), e("expense", 500, new Date(2026, 8, 12)), e("subscription", 900, null, "2026-01"), e("income", 99999, new Date(2026, 9, 1)));
+    db.users.get("u1")!.incomeGoal = 15000;
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-10-01T07:00:00Z"));
+      const r = await (await cron(new Request("http://x/api/cron/reminders"))).json();
+      expect(r.monthly).toBe(1); // u2 had no money last month: no summary
+      const m = received.map((x) => JSON.parse(x.payload)).find((p) => p.tag === "daftar-monthly");
+      expect(m).toEqual({ title: "ملخص سبتمبر 2026", body: "دخلك 12,000 ج.م، وصرفت 1,400، فصافي ربحك 10,600 ج.م (هامش 88%). كان فاضل 3,000 على الهدف.", url: "/app/report?m=2026-09", tag: "daftar-monthly" });
+      const again = await (await cron(new Request("http://x/api/cron/reminders"))).json();
+      expect(again.monthly).toBe(0);
+      vi.setSystemTime(new Date("2026-10-02T07:00:00Z"));
+      expect((await (await cron(new Request("http://x/api/cron/reminders"))).json()).monthly).toBe(0);
     } finally { vi.useRealTimers(); }
   });
 

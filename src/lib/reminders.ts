@@ -37,3 +37,16 @@ export function buildDigest(tasks: DigestTask[], today: Date, owed?: DigestOwed)
     `بكرة عندك ${tomorrow.length === 1 ? "مهمة" : `${tomorrow.length} مهام`}`;
   return { title, body, count };
 }
+
+/**
+ * The first-of-the-month notification: last month's income, spending and net profit, plus how the
+ * income goal went when one is set.
+ */
+export function buildMonthly(monthLabel: string, t: { I: number; S: number; X: number; net: number }, goal: number | null, currency: string): { title: string; body: string } | null {
+  if (!t.I && !t.S && !t.X) return null;
+  const margin = t.I ? ` (هامش ${Math.round((t.net / t.I) * 100)}%)` : "";
+  const net = t.net < 0 ? `خسارة ${fmt(-t.net)}` : `صافي ربحك ${fmt(t.net)}`;
+  let body = `دخلك ${fmt(t.I)} ${currency}، وصرفت ${fmt(t.S + t.X)}، ف${net} ${currency}${t.net < 0 ? "" : margin}.`;
+  if (goal) body += t.I >= goal ? " وصلت لهدف الشهر." : ` كان فاضل ${fmt(goal - t.I)} على الهدف.`;
+  return { title: `ملخص ${monthLabel}`, body };
+}
