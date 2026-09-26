@@ -56,6 +56,20 @@ export function NotifyCard() {
     } finally { setBusy(false); }
   }
 
+  // Shows a notification from this browser directly, with no server or push service involved.
+  // If this one doesn't appear either, the device (Windows/macOS/phone settings) is hiding notifications.
+  async function localTest() {
+    setMsg(null);
+    try {
+      const reg = await navigator.serviceWorker.getRegistration("/");
+      if (!reg) throw new Error();
+      await reg.showNotification("دفتر الاستوديو", { body: "تجربة من الجهاز نفسه ✓", dir: "rtl", lang: "ar", icon: "/icon.svg", tag: "daftar-local-test" });
+      setMsg({ text: "لو التنبيه ده ظهر، يبقى الجهاز تمام. لو مظهرش، التنبيهات مقفولة من إعدادات الجهاز (شوف تحت)." });
+    } catch {
+      setMsg({ text: "المتصفح رفض يعرض التنبيه. افتحه من علامة القفل جنب اللينك ← Notifications ← Allow.", err: true });
+    }
+  }
+
   async function test() {
     setBusy(true); setMsg(null);
     try {
@@ -79,11 +93,22 @@ export function NotifyCard() {
       {state === "on" && (
         <div className="flex flex-wrap gap-2">
           <Button onClick={test} disabled={busy}>ابعتلي تجربة</Button>
+          <Button kind="secondary" onClick={localTest} disabled={busy}>تجربة من الجهاز</Button>
           <Button kind="secondary" onClick={disable} disabled={busy}>وقّفها على الجهاز ده</Button>
         </div>
       )}
       {msg && <p role="status" className={`text-sm ${msg.err ? "text-risk" : "text-money"}`}>{msg.text}</p>}
       <p className="text-[13px] text-muted">فعّلها على كل جهاز عايزها عليه (الموبايل واللابتوب).</p>
+      {state === "on" && (
+        <details className="text-[13px] text-muted">
+          <summary className="cursor-pointer text-ink2">التنبيه مش بيظهر؟</summary>
+          <ul className="mt-1.5 list-inside list-disc">
+            <li>ويندوز: الإعدادات ← System ← Notifications ← شغّلها، وشغّل Google Chrome (أو Edge) تحتها، واقفل Do not disturb / Focus.</li>
+            <li>ماك: System Settings ← Notifications ← Google Chrome ← Allow notifications.</li>
+            <li>أندرويد: إعدادات التطبيقات ← Chrome ← الإشعارات ← مسموحة.</li>
+          </ul>
+        </details>
+      )}
     </Card>
   );
 }
