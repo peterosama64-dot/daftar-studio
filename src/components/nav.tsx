@@ -16,7 +16,7 @@ const ITEMS = [
   { href: "/app/clients", label: "العملاء" },
   { href: "/app/settings", label: "الإعدادات" },
 ];
-const MORE = ["/app/calendar", "/app/recurring", "/app/quotes", "/app/inbox", "/app/report", "/app/clients", "/app/settings", "/app/more"];
+const MORE = ["/app/search", "/app/calendar", "/app/recurring", "/app/quotes", "/app/inbox", "/app/report", "/app/clients", "/app/settings", "/app/more"];
 
 const isActive = (path: string, href: string) => (href === "/app" ? path === "/app" : path.startsWith(href));
 
@@ -26,10 +26,15 @@ function withMonth(href: string, m: string | null) {
 
 export function Sidebar() {
   const path = usePathname();
-  const m = useSearchParams().get("m");
+  const sp = useSearchParams();
+  const m = sp.get("m");
   return (
     <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-8 border-l border-rule bg-sheet px-4 py-7 lg:flex print:hidden">
       <Brand href="/app" />
+      <form action="/app/search" role="search">
+        <input name="q" type="search" placeholder="بحث…" aria-label="بحث" defaultValue={path.startsWith("/app/search") ? (sp.get("q") ?? "") : ""}
+          className="w-full rounded-[10px] border border-rule bg-paper px-3 py-2 text-sm placeholder:text-muted focus:border-cyan focus:outline-none" />
+      </form>
       <nav className="grid gap-0.5" aria-label="الأقسام">
         {ITEMS.map((i) => {
           const on = isActive(path, i.href);
