@@ -27,24 +27,29 @@ model User {
   lastMonthly  String? // "YYYY-MM" of the last month-summary notification
   incomeGoal   Float? // monthly income target, shown on the home page
   quotes       Quote[]
+  recurring    RecurringJob[]
 }
 
 model Task {
-  id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String
-  client    String    @default("")
-  due       DateTime?
-  priority  String    @default("normal") // high | normal | low
-  status    String    @default("todo") // todo | doing | done
-  source    String    @default("manual") // manual | voice | gmail | chat
-  notes     String    @default("")
-  agreed    Float?
-  paid      Float?
-  doneAt    DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  client      String    @default("")
+  due         DateTime?
+  priority    String    @default("normal") // high | normal | low
+  status      String    @default("todo") // todo | doing | done
+  source      String    @default("manual") // manual | voice | gmail | chat
+  notes       String    @default("")
+  agreed      Float?
+  paid        Float?
+  doneAt      DateTime?
+  timeSpent   Int       @default(0) // seconds tracked with the timer
+  timerStart  DateTime? // set while the timer runs
+  shareToken  String?   @unique // public invoice link
+  recurringId String? // made by a RecurringJob
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([userId, status])
 }
@@ -108,7 +113,24 @@ model Quote {
   notes        String   @default("")
   status       String   @default("draft") // draft | accepted
   taskId       String?
+  shareToken   String?  @unique // public link the client opens (and can accept from)
   createdAt    DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+// A monthly retainer (e.g. social media for a café): each month it becomes a task with this amount.
+model RecurringJob {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String
+  client     String   @default("")
+  amount     Float
+  dayOfMonth Int      @default(1) // due day; months shorter than this use their last day
+  active     Boolean  @default(true)
+  lastMonth  String? // "YYYY-MM" of the last task made, so a month is never made twice
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
 }

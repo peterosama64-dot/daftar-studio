@@ -10,6 +10,7 @@ import { requireUser } from "@/lib/auth";
 import { CURRENCIES, PRIORITIES, SOURCES, STATUSES } from "@/lib/constants";
 import { monthKey, parseDay, isMonthKey, now } from "@/lib/dates";
 import { ParsedSchema } from "@/lib/parsed";
+import { runRecurring } from "@/lib/recurring";
 import { parseItems, quoteNotes, quoteNumber, quoteTotal, readItems } from "@/lib/quote";
 
 const done = () => revalidatePath("/app", "layout");
@@ -241,4 +242,30 @@ export async function deleteQuote(id: string) {
   await prisma.quote.deleteMany({ where: { id, userId } });
   revalidatePath("/app/quotes");
   redirect("/app/quotes");
+}
+
+// ---------- monthly (recurring) jobs ----------
+export async function addRecurring(f: FormData) {
+  const userId = await requireUser();
+  const title = str(f, "title"), amount = num(f, "amount");
+  if (!title || !amount) return;
+  const day = Math.min(31, Math.max(1, Math.round(num(f, "day") ?? 1)));
+  await prisma.recurringJob.create({ data: { userId, title, client: str(f, "client", 80), amount, dayOfMonth: day } });
+  await runRecurring(prisma, now(), userId); // this month's task right away
+  done();
+}
+
+export async function toggleRecurring(id: string) {
+  const userId = await requireUser();
+  const j = await prisma.recurringJob.findFirst({ where: { id, userId } });
+  if (!j) return;
+  await prisma.recurringJob.updateMany({ where: { id, userId }, data: { active: !j.active } });
+  if (!j.active) await runRecurring(prisma, now(), userId);
+  done();
+}
+
+export async function deleteRecurring(id: string) {
+  const userId = await requireUser();
+  await prisma.recurringJob.deleteMany({ where: { id, userId } });
+  done();
 }

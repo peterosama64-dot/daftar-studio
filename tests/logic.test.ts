@@ -205,3 +205,31 @@ describe("calendar grid", () => {
     expect(monthGrid("2026-08")[0][0]!.getDate()).toBe(1); // 1 Aug 2026 is a Saturday
   });
 });
+
+import { recurringDue, recurringTitle, runRecurring } from "../src/lib/recurring";
+describe("monthly jobs", () => {
+  it("uses the month's last day when it is shorter", () => {
+    expect(recurringDue("2026-02", 31).getDate()).toBe(28);
+    expect(recurringDue("2026-09", 25).getDate()).toBe(25);
+    expect(recurringTitle("سوشيال", "2026-10")).toBe("سوشيال · أكتوبر 2026");
+  });
+  it("makes one task per job per month, even when run twice", async () => {
+    const jobs = [{ id: "j1", userId: "u", title: "سوشيال", client: "نون", amount: 4000, dayOfMonth: 25, active: true, lastMonth: null as string | null }];
+    const tasks: Record<string, unknown>[] = [];
+    const pick = (w: any) => jobs.filter((j) => (!w.id || j.id === w.id) && (w.active === undefined || j.active === w.active) && j.lastMonth !== w.OR[1].lastMonth.not);
+    const db = {
+      recurringJob: {
+        findMany: async ({ where }: any) => pick(where),
+        updateMany: async ({ where, data }: any) => { const m = pick(where); m.forEach((j) => (j.lastMonth = data.lastMonth)); return { count: m.length }; },
+      },
+      task: { create: async ({ data }: any) => { tasks.push(data); return data; } },
+    };
+    const today = new Date(2026, 9, 1);
+    expect(await runRecurring(db, today)).toBe(1);
+    expect(await runRecurring(db, today)).toBe(0);
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]).toMatchObject({ title: "سوشيال · أكتوبر 2026", client: "نون", agreed: 4000, recurringId: "j1" });
+    expect((tasks[0].due as Date).getDate()).toBe(25);
+    expect(await runRecurring(db, new Date(2026, 10, 1))).toBe(1); // next month
+  });
+});
