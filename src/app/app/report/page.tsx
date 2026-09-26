@@ -2,6 +2,8 @@ import { requireUser } from "@/lib/auth";
 import { PageHead } from "@/components/month";
 import { Card } from "@/components/ui";
 import { AiReport } from "@/components/ai-report";
+import { PrintButton } from "@/components/print-button";
+import { Brand } from "@/components/ui";
 import { loadMonth, monthFrom, type SP } from "@/lib/data";
 import { reportFacts, plainReport } from "@/lib/report";
 import { incomeByClient, fmt, signed } from "@/lib/money";
@@ -25,8 +27,14 @@ export default async function Report({ searchParams }: { searchParams: SP }) {
   ];
   return (
     <>
-      <PageHead title={`تقرير ${monthName(month)}`} base="/app/report" month={month} />
-      <div className="grid items-start gap-5 lg:grid-cols-[1.2fr_1fr]">
+      <div className="hidden items-center justify-between border-b border-rule pb-3 print:flex">
+        <Brand href="/app" />
+        <span className="text-sm text-muted">{new Date().toLocaleDateString("ar-EG-u-nu-latn", { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Cairo" })}</span>
+      </div>
+      <PageHead title={`تقرير ${monthName(month)}`} base="/app/report" month={month}>
+        <PrintButton file={`تقرير-دفتر-الاستوديو-${month}`} />
+      </PageHead>
+      <div className="grid items-start gap-5 lg:grid-cols-[1.2fr_1fr] print:grid-cols-[1.2fr_1fr]">
         <Card className="grid gap-3 rounded-tr-sm p-6 shadow-float">
           <div className="num flex justify-between text-xs text-muted"><span>REPORT · {month}</span><span>{d.cur.code}</span></div>
           <AiReport month={month} enabled={aiEnabled()} fallback={plainReport(f)} />

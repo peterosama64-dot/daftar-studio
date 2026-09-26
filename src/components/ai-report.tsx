@@ -22,12 +22,12 @@ export function AiReport({ month, enabled, fallback }: { month: string; enabled:
         {text ?? fallback.map((l, i) => <p key={i} className="mb-2">{l}</p>)}
       </div>
       {enabled ? (
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 print:hidden">
           <Button onClick={write} disabled={busy}>{busy ? "بيكتب…" : text ? "اكتبه تاني" : "اكتبلي التقرير"}</Button>
           {err && <span className="text-[13px] text-risk">{err}</span>}
         </div>
       ) : (
-        <p className="text-[13px] text-muted">التقرير ده محسوب من أرقامك. لما يتفعّل الترتيب الذكي هيظهر زرار «اكتبلي التقرير» ويكتبه بالعامية.</p>
+        <p className="text-[13px] text-muted print:hidden">التقرير ده محسوب من أرقامك. لما يتفعّل الترتيب الذكي هيظهر زرار «اكتبلي التقرير» ويكتبه بالعامية.</p>
       )}
     </div>
   );
