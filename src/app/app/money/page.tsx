@@ -1,18 +1,24 @@
 import { requireUser } from "@/lib/auth";
 import { MoneyStrip } from "@/components/money-strip";
 import { PageHead } from "@/components/month";
-import { Button, Card, Empty, inputClass } from "@/components/ui";
+import Link from "next/link";
+import { Button, Card, Empty, btnClass, inputClass } from "@/components/ui";
+import { prisma } from "@/lib/db";
+import { owedByClient } from "@/lib/owed";
 import { loadMonth, monthFrom, type SP } from "@/lib/data";
 import { monthTotals, fmt } from "@/lib/money";
 import { dayKey, shiftMonth, AR_MONTHS, shortDate, now } from "@/lib/dates";
-import { addEntry, deleteEntry, stopSubscription } from "../actions";
+import { addEntry, collectRemaining, deleteEntry, stopSubscription } from "../actions";
 
 export const metadata = { title: "الفلوس" };
 
 export default async function Money({ searchParams }: { searchParams: SP }) {
   const uid = await requireUser();
   const month = await monthFrom(searchParams);
-  const { entries, totals: t, cur } = await loadMonth(month, uid);
+  const [{ entries, totals: t, cur }, owed] = await Promise.all([
+    loadMonth(month, uid),
+    prisma.task.findMany({ where: { userId: uid, agreed: { gt: 0 } }, select: { id: true, title: true, client: true, agreed: true, paid: true } }).then(owedByClient),
+  ]);
   const months = Array.from({ length: 6 }, (_, i) => shiftMonth(month, i - 5)).map((k) => ({ k, ...monthTotals(entries, k) }));
   const max = Math.max(1, ...months.map((m) => Math.max(m.I, m.out)));
   const [y, mm] = month.split("-").map(Number);
@@ -35,6 +41,35 @@ export default async function Money({ searchParams }: { searchParams: SP }) {
     <>
       <PageHead title="الفلوس" base="/app/money" month={month} sub={`كل المبالغ بالـ${cur.short}`} />
       <MoneyStrip I={t.I} S={t.S} X={t.X} net={t.net} cur={cur.short} />
+      {owed.total > 0 && (
+        <Card className="p-5" aria-labelledby="owed-h">
+          <div className="flex items-baseline justify-between border-b-2 border-wait pb-2">
+            <h2 id="owed-h" className="text-lg font-bold">ليك عند العملاء</h2>
+            <span className="num font-semibold text-wait">{fmt(owed.total)} {cur.short}</span>
+          </div>
+          <ul>
+            {owed.clients.map((c) => (
+              <li key={c.name} className="border-b border-rule py-3 last:border-b-0">
+                <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                  <span className="font-semibold">{c.name}</span>
+                  <span className="num text-wait">{fmt(c.owed)}</span>
+                </div>
+                <ul className="grid gap-1.5">
+                  {c.tasks.map((x) => (
+                    <li key={x.id} className="flex flex-wrap items-center gap-2 text-sm">
+                      <Link href={`/app/tasks/${x.id}`} className="min-w-0 flex-1 text-ink2 [overflow-wrap:anywhere] hover:text-cyan">{x.title}</Link>
+                      <span className="num text-muted">{fmt(x.remaining)}</span>
+                      <Link href={`/app/tasks/${x.id}/invoice`} className={btnClass("ghost", true)}>فاتورة</Link>
+                      <form action={collectRemaining.bind(null, x.id)}><Button kind="secondary" small>قبضت الباقي</Button></form>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[13px] text-muted">«قبضت الباقي» بيقفل المبلغ في المهمة ويسجّله دخل النهارده. لو قبضت جزء بس، عدّل «اتدفع منه» في المهمة.</p>
+        </Card>
+      )}
       <div className="grid items-start gap-5 lg:grid-cols-2">
         <Card className="p-5">
           {head("الدخل", t.I)}
