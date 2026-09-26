@@ -95,3 +95,32 @@ describe("offline parser", () => {
     expect(p.income[0].amount).toBe(5000);
   });
 });
+
+describe("heuristic parser on a WhatsApp export", () => {
+  const today = new Date(2026, 8, 25);
+  const chat = [
+    "[9/25/26, 7:04:30 PM] You: You deleted this message",
+    "[9/25/26, 7:04:46 PM] You: ‎<document omitted> IMG-20260925-WA0046.jpg",
+    "[9/25/26, 8:10:02 PM] Mona Cafe: ازيك يا بيتر",
+    "[9/25/26, 8:11:15 PM] Mona Cafe: عايزين بوستر للمنيو الجديد يوم الخميس ومستعجل",
+    "[9/25/26, 8:12:40 PM] You: تمام",
+    "[9/25/26, 9:00:00 PM] Mona Cafe: حولتلك 2000 مقدم",
+    "[9/25/26, 10:19:48 PM] You: و قولي عايز تشتغل على ايه منتجات منه",
+  ].join("\n");
+  const p = heuristicParse(chat, today);
+  it("drops timestamps, names, media and small talk", () => {
+    expect(p.tasks.map((t) => t.title).join(" | ")).not.toMatch(/omitted|deleted|ازيك|تمام|PM/);
+    expect(p.tasks.length).toBeLessThanOrEqual(2);
+  });
+  it("keeps the real request and the payment", () => {
+    const poster = p.tasks.find((t) => t.title.includes("بوستر"));
+    expect(poster?.priority).toBe("high");
+    expect(poster?.due).toBe("2026-10-01");
+    expect(poster?.client).toBe("Mona Cafe");
+    expect(p.income[0]?.amount).toBe(2000);
+    expect(p.income[0]?.client).toBe("Mona Cafe");
+  });
+  it("leaves normal (non-chat) text alone", () => {
+    expect(heuristicParse("بوستر مكتبة الكرمة بكرة", today).tasks).toHaveLength(1);
+  });
+});

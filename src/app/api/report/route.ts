@@ -5,6 +5,9 @@ import { isMonthKey } from "@/lib/dates";
 import { reportFacts } from "@/lib/report";
 import { currentUserId } from "@/lib/auth";
 
+// Gemini may retry a busy model before answering.
+export const maxDuration = 60;
+
 export async function POST(req: Request) {
   const uid = await currentUserId();
   if (!uid) return NextResponse.json({ error: "سجّل دخول الأول." }, { status: 401 });

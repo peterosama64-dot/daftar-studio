@@ -7,8 +7,10 @@ import { ParsedSchema, type Parsed } from "./parsed";
 import { heuristicParse } from "./heuristic";
 
 const CLAUDE_MODEL = "claude-opus-5";
-// "latest" alias so a retired Gemini version never breaks the app; override with GEMINI_MODEL.
-const geminiModel = () => process.env.GEMINI_MODEL || "gemini-flash-latest";
+// "latest" aliases so a retired Gemini version never breaks the app; override the first with GEMINI_MODEL.
+// The free tier often answers 503 "high demand": retry once, then try the lighter model.
+const geminiModels = () => [process.env.GEMINI_MODEL || "gemini-flash-latest", "gemini-flash-lite-latest"];
+const BUSY = new Set([429, 500, 503]);
 
 export type AiProvider = "claude" | "gemini";
 
@@ -22,7 +24,26 @@ export const aiEnabled = () => aiProvider() !== null;
 export const aiName = () => (aiProvider() === "gemini" ? "Gemini" : "Claude");
 
 const claude = () => new Anthropic();
-const gemini = () => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, httpOptions: { timeout: 30_000 } });
+const gemini = () => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, httpOptions: { timeout: 15_000 } });
+
+/** Call Gemini, retrying a busy model once and then moving to the next one. Throws the last error. */
+async function geminiGenerate(contents: string, config: Parameters<GoogleGenAI["models"]["generateContent"]>[0]["config"]) {
+  const ai = gemini();
+  let last: unknown;
+  for (const model of geminiModels()) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        return await ai.models.generateContent({ model, contents, config });
+      } catch (e) {
+        last = e;
+        if (!(e instanceof GeminiApiError && BUSY.has(e.status))) throw e;
+        console.warn(`Gemini ${model} busy (${e.status}), attempt ${attempt + 1}`);
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 1200));
+      }
+    }
+  }
+  throw last;
+}
 
 const parseSystem = (currency: string, today: Date) =>
   `You organise the work log of a freelance graphic designer / art director in Egypt or the Gulf. ` +
@@ -62,14 +83,10 @@ export async function parseText(text: string, currency: string, today = now()): 
   }
   if (provider === "gemini") {
     try {
-      const res = await gemini().models.generateContent({
-        model: geminiModel(),
-        contents: input,
-        config: {
-          systemInstruction: parseSystem(currency, today),
-          responseMimeType: "application/json",
-          responseJsonSchema: z.toJSONSchema(ParsedSchema),
-        },
+      const res = await geminiGenerate(input, {
+        systemInstruction: parseSystem(currency, today),
+        responseMimeType: "application/json",
+        responseJsonSchema: z.toJSONSchema(ParsedSchema),
       });
       const parsed = ParsedSchema.safeParse(JSON.parse(res.text ?? ""));
       if (!parsed.success) { console.error("parseText: Gemini returned an unexpected shape"); return offline(); }
@@ -103,11 +120,7 @@ export async function writeReport(data: unknown): Promise<string | null> {
   }
   if (provider === "gemini") {
     try {
-      const res = await gemini().models.generateContent({
-        model: geminiModel(),
-        contents: JSON.stringify(data),
-        config: { systemInstruction: REPORT_SYSTEM },
-      });
+      const res = await geminiGenerate(JSON.stringify(data), { systemInstruction: REPORT_SYSTEM });
       return res.text?.trim() || null;
     } catch (e) {
       console.error("writeReport: Gemini error", e instanceof GeminiApiError ? e.status : "", e instanceof Error ? e.message : e);
