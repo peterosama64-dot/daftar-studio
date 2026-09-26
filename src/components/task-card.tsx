@@ -4,6 +4,7 @@ import { Pill } from "./ui";
 import { dueTone } from "@/lib/tasks";
 import { daysUntil, shortDate } from "@/lib/dates";
 import { SOURCE_LABEL, type Source } from "@/lib/constants";
+import { clientHref } from "@/lib/contact";
 import { toggleTask, togglePriority, deleteTask } from "@/app/app/actions";
 
 export function TaskCard({ t, today, compact }: { t: Task & { subtasks?: { done: boolean }[] }; today: Date; compact?: boolean }) {
@@ -28,7 +29,7 @@ export function TaskCard({ t, today, compact }: { t: Task & { subtasks?: { done:
               {tone.tone === "overdue" || tone.tone === "today" ? <Pill tone="urgent">{tone.label}</Pill> : tone.tone === "soon" ? <Pill tone="waiting">{tone.label}</Pill> : null}
               {tone.tone === "later" && t.due && <Pill mono>{shortDate(t.due)}</Pill>}
               {t.priority === "high" && !done && <Pill tone="urgent">مستعجل</Pill>}
-              {t.client && <Pill tone="later">{t.client}</Pill>}
+              {t.client && <Link href={clientHref(t.client)} className="hover:opacity-80"><Pill tone="later">{t.client}</Pill></Link>}
               {!!t.subtasks?.length && <Pill mono tone={t.subtasks.every((x) => x.done) ? "money" : "neutral"}>{`${t.subtasks.filter((x) => x.done).length}/${t.subtasks.length}`}</Pill>}
               {src && <Pill>{src}</Pill>}
             </div>

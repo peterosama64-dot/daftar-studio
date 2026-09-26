@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { currencyShort } from "@/lib/data";
 import { fmt } from "@/lib/money";
 import { monthKey, shortDate, now as nowTz } from "@/lib/dates";
+import { clientHref } from "@/lib/contact";
 
 export const metadata = { title: "العملاء" };
 
@@ -59,7 +60,7 @@ export default async function Clients() {
             <tbody>
               {rows.map((r) => (
                 <tr key={r.name} className="border-b border-rule last:border-b-0">
-                  <td className="px-3 py-3 font-semibold"><Link href={`/app/tasks?q=${encodeURIComponent(r.name)}`} className="hover:text-cyan">{r.name}</Link></td>
+                  <td className="px-3 py-3 font-semibold"><Link href={clientHref(r.name)} className="hover:text-cyan">{r.name}</Link></td>
                   <td className="num px-3 py-3 text-right">{r.open}</td>
                   <td className="num px-3 py-3 text-right text-muted">{r.lastDone ? shortDate(r.lastDone) : "—"}</td>
                   <td className="num px-3 py-3 text-right">{fmt(r.month)}</td>
