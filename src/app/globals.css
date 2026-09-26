@@ -56,7 +56,7 @@ h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 
 /* Printing / "Save as PDF": always the light palette, no app chrome, colours kept. */
-@page { size: A4; margin: 14mm; }
+@page { size: A4; margin: 12mm; }
 @media print {
   html, body { background: #fff; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }

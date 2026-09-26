@@ -18,7 +18,7 @@ export function AiReport({ month, enabled, fallback }: { month: string; enabled:
   }
   return (
     <div className="grid gap-4">
-      <div className="max-w-[62ch] whitespace-pre-wrap text-[16px] leading-loose text-ink2">
+      <div className="max-w-[62ch] whitespace-pre-wrap text-[16px] leading-loose text-ink2 print:max-w-none print:text-[13px] print:leading-[1.85]">
         {text ?? fallback.map((l, i) => <p key={i} className="mb-2">{l}</p>)}
       </div>
       {enabled ? (

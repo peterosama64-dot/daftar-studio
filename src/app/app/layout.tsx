@@ -11,7 +11,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Suspense><Sidebar /></Suspense>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between px-4 pt-4 lg:hidden print:hidden"><Brand href="/app" /></div>
-        <main className="mx-auto grid max-w-[1120px] gap-6 px-4 pt-5 pb-32 lg:px-10 lg:pt-8 lg:pb-16 print:max-w-none print:p-0">{children}</main>
+        <main className="mx-auto grid max-w-[1120px] gap-6 px-4 pt-5 pb-32 lg:px-10 lg:pt-8 lg:pb-16 print:max-w-none print:gap-3 print:p-0">{children}</main>
       </div>
       <Suspense><TabBar /></Suspense>
     </div>

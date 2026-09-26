@@ -34,21 +34,21 @@ export default async function Report({ searchParams }: { searchParams: SP }) {
       <PageHead title={`تقرير ${monthName(month)}`} base="/app/report" month={month}>
         <PrintButton file={`تقرير-دفتر-الاستوديو-${month}`} />
       </PageHead>
-      <div className="grid items-start gap-5 lg:grid-cols-[1.2fr_1fr] print:grid-cols-[1.2fr_1fr]">
-        <Card className="grid gap-3 rounded-tr-sm p-6 shadow-float">
+      <div className="grid items-start gap-5 lg:grid-cols-[1.2fr_1fr] print:grid-cols-1 print:gap-3">
+        <Card className="grid gap-3 rounded-tr-sm p-6 shadow-float print:gap-2 print:p-4">
           <div className="num flex justify-between text-xs text-muted"><span>REPORT · {month}</span><span>{d.cur.code}</span></div>
           <AiReport month={month} enabled={aiEnabled()} fallback={plainReport(f)} />
         </Card>
-        <div className="grid gap-5">
-          <Card className="p-5">
+        <div className="grid gap-5 print:grid-cols-2 print:items-start print:gap-3">
+          <Card className="p-5 print:p-4">
             <h2 className="mb-2 text-lg font-bold">الأرقام</h2>
             <dl className="grid">
               {kv.map(([k, v, c]) => (
-                <div key={k} className="flex justify-between border-b border-rule py-2 last:border-b-0"><dt className="text-sm text-muted">{k}</dt><dd className={`num ${c ?? ""}`}>{v}</dd></div>
+                <div key={k} className="flex justify-between border-b border-rule py-2 last:border-b-0 print:py-1"><dt className="text-sm text-muted">{k}</dt><dd className={`num ${c ?? ""}`}>{v}</dd></div>
               ))}
             </dl>
           </Card>
-          <Card className="grid gap-3 p-5">
+          <Card className="grid gap-3 p-5 print:p-4">
             <h2 className="text-lg font-bold">الدخل حسب العميل</h2>
             {clients.length ? clients.slice(0, 6).map(([name, amt]) => (
               <div key={name} className="grid grid-cols-[88px_1fr_64px] items-center gap-2.5 text-[13px]">
