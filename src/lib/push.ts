@@ -31,7 +31,8 @@ export async function vapidKeys() {
   return (cached = { publicKey: k.publicKey, privateKey: k.privateKey });
 }
 
-export type PushPayload = { title: string; body: string; url?: string };
+// `tag`: notifications with the same tag replace each other, so the monthly summary uses its own.
+export type PushPayload = { title: string; body: string; url?: string; tag?: string };
 
 /** Sends to every device of the user; forgets devices the push service says are gone. */
 export async function pushToUser(userId: string, payload: PushPayload): Promise<{ devices: number; sent: number }> {

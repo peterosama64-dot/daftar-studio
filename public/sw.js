@@ -8,7 +8,7 @@ self.addEventListener("push", (event) => {
     lang: "ar",
     icon: "/icon.svg",
     badge: "/icon.svg",
-    tag: "daftar-digest",
+    tag: data.tag || "daftar-digest",
     data: { url: data.url || "/app" },
   }));
 });
