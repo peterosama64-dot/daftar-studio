@@ -9,8 +9,10 @@ import { heuristicParse } from "./heuristic";
 const CLAUDE_MODEL = "claude-opus-5";
 // "latest" aliases so a retired Gemini version never breaks the app; override the first with GEMINI_MODEL.
 // The free tier often answers 503 "high demand": retry once, then try the lighter model.
+// 504 "deadline expired" means the model was too slow: go straight to the lighter one.
 const geminiModels = () => [process.env.GEMINI_MODEL || "gemini-flash-latest", "gemini-flash-lite-latest"];
 const BUSY = new Set([429, 500, 503]);
+const SLOW = 504;
 
 export type AiProvider = "claude" | "gemini";
 
@@ -24,7 +26,7 @@ export const aiEnabled = () => aiProvider() !== null;
 export const aiName = () => (aiProvider() === "gemini" ? "Gemini" : "Claude");
 
 const claude = () => new Anthropic();
-const gemini = () => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, httpOptions: { timeout: 15_000 } });
+const gemini = () => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, httpOptions: { timeout: 20_000 } });
 
 /** Call Gemini, retrying a busy model once and then moving to the next one. Throws the last error. */
 async function geminiGenerate(contents: string, config: Parameters<GoogleGenAI["models"]["generateContent"]>[0]["config"]) {
@@ -36,8 +38,9 @@ async function geminiGenerate(contents: string, config: Parameters<GoogleGenAI["
         return await ai.models.generateContent({ model, contents, config });
       } catch (e) {
         last = e;
-        if (!(e instanceof GeminiApiError && BUSY.has(e.status))) throw e;
-        console.warn(`Gemini ${model} busy (${e.status}), attempt ${attempt + 1}`);
+        if (!(e instanceof GeminiApiError && (BUSY.has(e.status) || e.status === SLOW))) throw e;
+        console.warn(`Gemini ${model} ${e.status === SLOW ? "too slow" : "busy"} (${e.status}), attempt ${attempt + 1}`);
+        if (e.status === SLOW) break;
         if (attempt === 0) await new Promise((r) => setTimeout(r, 1200));
       }
     }

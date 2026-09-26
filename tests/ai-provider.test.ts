@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { aiProvider, parseText } from "../src/lib/ai";
+import { aiProvider, parseText, writeReport } from "../src/lib/ai";
 
 const keys = ["ANTHROPIC_API_KEY", "GEMINI_API_KEY"] as const;
 afterEach(() => { for (const k of keys) delete process.env[k]; vi.unstubAllGlobals(); });
@@ -59,4 +59,20 @@ describe("ai provider", () => {
     expect(urls.at(-1)).toContain("gemini-flash-lite-latest");
     warn.mockRestore();
   }, 20_000);
+  it("moves straight to the lighter model when Gemini times out (504)", async () => {
+    process.env.GEMINI_API_KEY = "g";
+    const urls: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (u: any) => {
+      urls.push(String(u));
+      if (String(u).includes("gemini-flash-latest"))
+        return new Response(JSON.stringify({ error: { code: 504, message: "Deadline expired before operation could complete.", status: "DEADLINE_EXCEEDED" } }), { status: 504, headers: { "content-type": "application/json" } });
+      return new Response(JSON.stringify({ candidates: [{ content: { role: "model", parts: [{ text: "تقرير الشهر" }] }, finishReason: "STOP" }] }),
+        { status: 200, headers: { "content-type": "application/json" } });
+    }));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await writeReport({ month: "سبتمبر" })).toBe("تقرير الشهر");
+    expect(urls.filter((u) => u.includes("gemini-flash-latest")).length).toBe(1);
+    expect(urls.at(-1)).toContain("gemini-flash-lite-latest");
+    warn.mockRestore();
+  });
 });
