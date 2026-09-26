@@ -278,3 +278,23 @@ describe("year report", () => {
     expect(mid.subs[0].months).toBe(9);
   });
 });
+
+import { currentRound, revisionState, safeName, sniffType } from "../src/lib/revisions";
+describe("revisions & deliveries", () => {
+  it("counts revisions against the agreed number", () => {
+    expect(revisionState(1, 3)).toEqual({ used: 1, allowed: 3, left: 2, over: 0, nextIsExtra: false });
+    expect(revisionState(3, 3)).toMatchObject({ left: 0, over: 0, nextIsExtra: true });
+    expect(revisionState(5, 3)).toMatchObject({ over: 2, nextIsExtra: true });
+    expect(revisionState(4, null)).toMatchObject({ left: null, over: 0, nextIsExtra: false });
+    expect(revisionState(0, 0)).toMatchObject({ nextIsExtra: true });
+    expect(currentRound(0)).toBe(1);
+    expect(currentRound(2)).toBe(3);
+  });
+  it("recognises real images and PDFs, not renamed files", () => {
+    expect(sniffType(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0, 0]))).toBe("image/png");
+    expect(sniffType(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))).toBe("image/jpeg");
+    expect(sniffType(new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d]))).toBe("application/pdf");
+    expect(sniffType(new Uint8Array([0x4d, 0x5a, 0x90, 0]))).toBeNull(); // Windows .exe
+    expect(safeName('../lo"go?.png')).toBe("..-lo-go-.png");
+  });
+});

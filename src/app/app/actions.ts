@@ -13,6 +13,7 @@ import { ParsedSchema } from "@/lib/parsed";
 import { runRecurring } from "@/lib/recurring";
 import { parseItems } from "@/lib/quote";
 import { acceptQuoteFor, newToken } from "@/lib/share";
+import { removeFile } from "@/lib/files";
 
 const done = () => revalidatePath("/app", "layout");
 const str = (f: FormData, k: string, max = 200) => String(f.get(k) ?? "").trim().slice(0, max);
@@ -300,4 +301,54 @@ async function stopFor(userId: string, id: string) {
   if (!t?.timerStart) return;
   const sec = Math.max(0, Math.floor((Date.now() - t.timerStart.getTime()) / 1000));
   await prisma.task.updateMany({ where: { id, userId, timerStart: t.timerStart }, data: { timerStart: null, timeSpent: { increment: sec } } });
+}
+
+// ---------- deliveries & revisions ----------
+const taskPath = (id: string) => revalidatePath(`/app/tasks/${id}`);
+
+export async function deleteDelivery(id: string) {
+  const userId = await requireUser();
+  const d = await prisma.delivery.findFirst({ where: { id, userId } });
+  if (!d) return;
+  await prisma.delivery.deleteMany({ where: { id, userId } });
+  await removeFile(d.url);
+  taskPath(d.taskId);
+}
+
+export async function setRevisionsAllowed(taskId: string, f: FormData) {
+  const userId = await requireUser();
+  const n = num(f, "allowed");
+  await prisma.task.updateMany({ where: { id: taskId, userId }, data: { revisionsAllowed: n === null ? null : Math.min(99, Math.round(n)) } });
+  taskPath(taskId);
+}
+
+/** The owner logs a revision the client asked for elsewhere (WhatsApp, a call). */
+export async function addRevision(taskId: string, f: FormData) {
+  const userId = await requireUser();
+  const t = await prisma.task.findFirst({ where: { id: taskId, userId }, select: { id: true } });
+  if (!t) return;
+  await prisma.$transaction([
+    prisma.revision.create({ data: { taskId, userId, note: str(f, "note", 1000), by: "owner" } }),
+    prisma.task.updateMany({ where: { id: taskId, userId }, data: { approvedAt: null } }),
+  ]);
+  taskPath(taskId);
+}
+
+export async function deleteRevision(id: string) {
+  const userId = await requireUser();
+  const r = await prisma.revision.findFirst({ where: { id, userId }, select: { taskId: true } });
+  if (!r) return;
+  await prisma.revision.deleteMany({ where: { id, userId } });
+  taskPath(r.taskId);
+}
+
+export async function shareReview(taskId: string) {
+  const userId = await requireUser();
+  await prisma.task.updateMany({ where: { id: taskId, userId, reviewToken: null }, data: { reviewToken: newToken() } });
+  taskPath(taskId);
+}
+export async function unshareReview(taskId: string) {
+  const userId = await requireUser();
+  await prisma.task.updateMany({ where: { id: taskId, userId }, data: { reviewToken: null } });
+  taskPath(taskId);
 }

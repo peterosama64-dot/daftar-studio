@@ -6,6 +6,8 @@ import { SESSION_COOKIE, verifySession } from "@/lib/session";
 export async function middleware(req: NextRequest) {
   // The daily reminder job is called by Vercel Cron, not a user (it checks CRON_SECRET itself).
   if (req.nextUrl.pathname === "/api/cron/reminders") return NextResponse.next();
+  // Local-testing file server (it answers 404 unless LOCAL_FILES=1); the client review page loads images from it.
+  if (req.nextUrl.pathname.startsWith("/api/files/local/")) return NextResponse.next();
   const uid = await verifySession(req.cookies.get(SESSION_COOKIE)?.value);
   if (uid) return NextResponse.next();
   // Gmail connect/callback (to and from Google) and the Excel download are browser navigations, not fetches.
