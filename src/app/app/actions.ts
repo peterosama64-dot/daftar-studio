@@ -295,11 +295,21 @@ export async function stopTimer(id: string) {
   done();
 }
 
+/**
+ * Focus mode ended: stop the timer but count only up to the end of the focus block (`untilMs`),
+ * so coming back to the page late doesn't add the idle time.
+ */
+export async function stopTimerAt(id: string, untilMs: number) {
+  await stopFor(await requireUser(), id, Number.isFinite(untilMs) ? untilMs : undefined);
+  done();
+}
+
 /** Add the running session to timeSpent. Conditional on the same start, so a double stop adds it once. */
-async function stopFor(userId: string, id: string) {
+async function stopFor(userId: string, id: string, untilMs?: number) {
   const t = await prisma.task.findFirst({ where: { id, userId }, select: { timerStart: true } });
   if (!t?.timerStart) return;
-  const sec = Math.max(0, Math.floor((Date.now() - t.timerStart.getTime()) / 1000));
+  const end = Math.min(Date.now(), untilMs ?? Date.now());
+  const sec = Math.max(0, Math.floor((end - t.timerStart.getTime()) / 1000));
   await prisma.task.updateMany({ where: { id, userId, timerStart: t.timerStart }, data: { timerStart: null, timeSpent: { increment: sec } } });
 }
 

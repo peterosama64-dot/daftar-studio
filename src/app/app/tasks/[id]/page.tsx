@@ -7,7 +7,8 @@ import { dayKey } from "@/lib/dates";
 import { fmt } from "@/lib/money";
 import { SOURCE_LABEL, type Source } from "@/lib/constants";
 import { Button, Card, Field, btnClass, inputClass } from "@/components/ui";
-import { updateTask, deleteTaskAndReturn, startTimer, stopTimer } from "../../actions";
+import { updateTask, deleteTaskAndReturn, startTimer, stopTimer, stopTimerAt } from "../../actions";
+import { FocusCard } from "@/components/focus-card";
 import { TimerCard } from "@/components/timer-card";
 import { DeliveryCard } from "@/components/delivery-card";
 import { ChecklistCard } from "@/components/checklist-card";
@@ -24,6 +25,7 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
       <Card className="mx-auto grid w-full max-w-2xl gap-5 p-5 lg:p-7">
         <TimerCard timeSpent={t.timeSpent} timerStart={t.timerStart?.toISOString() ?? null} agreed={t.agreed} cur={cur.short}
           start={startTimer.bind(null, t.id)} stop={stopTimer.bind(null, t.id)} />
+        <FocusCard taskId={t.id} title={t.title} timerRunning={!!t.timerStart} start={startTimer.bind(null, t.id)} stopAt={stopTimerAt.bind(null, t.id)} />
         <form action={updateTask.bind(null, t.id)} className="grid gap-4">
           <Field label="المهمة"><input name="title" defaultValue={t.title} required className={inputClass} /></Field>
           <fieldset className="grid grid-cols-3 gap-1 rounded-[10px] bg-sunken p-1">
