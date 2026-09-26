@@ -5,6 +5,9 @@ import { getCurrency } from "@/lib/db";
 import { currentUserId } from "@/lib/auth";
 import { parsedCount } from "@/lib/parsed";
 
+// Gemini may retry a busy model before answering.
+export const maxDuration = 60;
+
 const Body = z.object({ text: z.string().min(1).max(40_000) });
 
 // Simple per-instance limiter: 20 requests / minute per user.

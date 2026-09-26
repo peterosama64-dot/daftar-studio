@@ -1,4 +1,4 @@
-// Offline parser for «رتّبهالي» when no ANTHROPIC_API_KEY is set.
+// Offline parser for «رتّبهالي» when no AI key is set, or the AI call fails.
 // Rough by design: one item per clause, keyword-driven. Claude does the real job.
 import { AR_DAYS, dayKey } from "./dates";
 import { emptyParsed, type Parsed } from "./parsed";
@@ -7,7 +7,7 @@ const AR_DIGITS = "٠١٢٣٤٥٦٧٨٩";
 export const normalizeDigits = (s: string) =>
   s.replace(/[٠-٩]/g, (d) => String(AR_DIGITS.indexOf(d))).replace(/[٬،](?=\d{3}\b)/g, "").replace(/(\d),(\d{3})\b/g, "$1$2");
 
-const INCOME = /(استلمت|قبضت|حوّل|حول لي|حولي|دخلي|اتدفعلي|دفعولي)/;
+const INCOME = /(استلمت|قبضت|حوّلتلك|حولتلك|حوّل|حول لي|حولي|دخلي|اتدفعلي|دفعولي|وصلني|وصلتني)/;
 const SUB = /(جددت|جدّدت|اشتراك|اشتركت|تجديد)/;
 const EXPENSE = /(دفعت|اشتريت|صرفت|مصاريف)/;
 const DONE = /(خلصت|خلّصت|سلمت|سلّمت|بعت (الـ)?نسخة النهائية)/;
@@ -56,8 +56,37 @@ const clean = (s: string) => {
   return t;
 };
 
+// WhatsApp export lines: "[9/25/26, 7:04:46 PM] Name: msg" (iOS) or "25/09/2026, 19:04 - Name: msg" (Android).
+const CHAT_LINE = /^\s*\u200e?(?:\[[^\]]*\d{1,2}:\d{2}[^\]]*\]\s*|\d{1,4}[/.-]\d{1,2}[/.-]\d{1,4},?\s+\d{1,2}:\d{2}(?:\s?[APap][Mm])?\s+-\s+)/;
+const CHAT_NOISE = /(omitted|deleted this message|This message was deleted|end-to-end encrypted|changed the subject|joined using|added|left|‎?تم حذف هذه الرسالة|لقد حذفت هذه الرسالة|تم استبعاد|<[^>]+>|https?:\/\/\S+)/i;
+const TASK_SIGNAL = /(لازم|محتاج|عايز|عاوز|ممكن|سلّ?م|ابعت|اعمل|صمم|صمّم|عدّ?ل|تعديل|لوجو|بوستر|براند|هوية|تصميم|فلاير|بانر|موك ?اب|ديدلاين|deadline|logo|poster|design|مستعجل|ضروري|بكرة|بكره|النهارده|الخميس|الجمعة|السبت|الأحد|الاتنين|التلات|الأربع|آخر الشهر|اخر الشهر|خلصت|خلّصت)/i;
+
+const ME = /^(you|أنت|انت|me)$/i;
+
+/** A pasted chat export → its messages (sender + body), without timestamps, media and system lines. */
+function chatMessages(text: string): { from: string; body: string }[] | null {
+  const lines = text.split(/\r?\n/);
+  if (lines.filter((l) => CHAT_LINE.test(l)).length < 3) return null;
+  return lines
+    .map((l) => {
+      const rest = l.replace(CHAT_LINE, "");
+      const m = rest.match(/^([^:]{1,40}):\s*(.*)$/);
+      return m ? { from: m[1].trim(), body: m[2].trim() } : { from: "", body: rest.trim() };
+    })
+    .filter((m) => m.body && !CHAT_NOISE.test(m.body));
+}
+
 export function heuristicParse(text: string, today = new Date()): Parsed {
   const out = emptyParsed();
+  const chat = chatMessages(text);
+  if (!chat) { parseInto(out, text, today, false, ""); return out; }
+  // In a chat the client is whoever sent the message (not you).
+  for (const m of chat) parseInto(out, m.body, today, true, ME.test(m.from) ? "" : m.from.slice(0, 60));
+  return out;
+}
+
+function parseInto(out: Parsed, text: string, today: Date, chat: boolean, sender: string) {
+  const who = (c: string) => sender || clientOf(c);
   const clauses = normalizeDigits(text)
     .split(/[.\n؛;]|،|(?:\s+و(?=(?:استلمت|قبضت|جددت|دفعت|اشتريت|صرفت|لازم|عندي|محتاج|خلصت|سلمت)))/)
     .map((c) => c.trim())
@@ -66,7 +95,7 @@ export function heuristicParse(text: string, today = new Date()): Parsed {
   for (const c of clauses) {
     const amt = amountOf(c);
     if (amt && INCOME.test(c)) {
-      out.income.push({ name: clean(c.replace(INCOME, "").replace(/\d[\d.]*\s*(الف|ألف)?/, "")).slice(0, 80) || "دخل", client: clientOf(c), amount: amt, date: todayKey });
+      out.income.push({ name: clean(c.replace(INCOME, "").replace(/\d[\d.]*\s*(الف|ألف)?/, "")).slice(0, 80) || "دخل", client: who(c), amount: amt, date: todayKey });
     } else if (amt && SUB.test(c)) {
       const name = clean(c.replace(SUB, "").replace(/(بـ|ب)?\s*\d[\d.]*.*/, "")) || "اشتراك";
       out.subscriptions.push({ name: name.slice(0, 60), amount: amt });
@@ -74,10 +103,11 @@ export function heuristicParse(text: string, today = new Date()): Parsed {
       out.expenses.push({ name: clean(c.replace(EXPENSE, "").replace(/(بـ|ب)?\s*\d[\d.]*.*/, "")).slice(0, 80) || "مصروف", amount: amt, date: todayKey });
     } else {
       const done = DONE.test(c);
+      // In a chat, most messages are conversation, not work: keep only ones that look like a task.
+      if (chat && !TASK_SIGNAL.test(c)) continue;
       const title = clean(c.replace(DONE, "").replace(/(ومستعجل|مستعجل|ضروري)/g, "").replace(/\s+(يوم\s+)?(النهارده|بكرة|بكره|بعد بكرة|الخميس|الجمعة|السبت|الأحد|الاتنين|التلات|الأربع|آخر الشهر)\s*$/, ""));
       if (title.length < 3) continue;
-      out.tasks.push({ title: title.slice(0, 120), client: clientOf(c), due: done ? "" : dueOf(c, today), priority: URGENT.test(c) ? "high" : "normal", status: done ? "done" : "todo" });
+      out.tasks.push({ title: title.slice(0, 120), client: who(c), due: done ? "" : dueOf(c, today), priority: URGENT.test(c) ? "high" : "normal", status: done ? "done" : "todo" });
     }
   }
-  return out;
 }

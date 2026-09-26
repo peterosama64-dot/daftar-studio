@@ -40,4 +40,23 @@ describe("ai provider", () => {
     expect(body.generationConfig.responseJsonSchema.properties.tasks).toBeTruthy();
     expect(JSON.stringify(body.systemInstruction)).toContain("EGP");
   });
+  it("retries a busy Gemini model, then uses the lighter one", async () => {
+    process.env.GEMINI_API_KEY = "g";
+    const answer = { tasks: [], income: [{ name: "دخل", client: "", amount: 2500, date: "2026-09-25" }], subscriptions: [], expenses: [] };
+    const urls: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (u: any) => {
+      urls.push(String(u));
+      if (String(u).includes("gemini-flash-latest"))
+        return new Response(JSON.stringify({ error: { code: 503, message: "high demand", status: "UNAVAILABLE" } }), { status: 503, headers: { "content-type": "application/json" } });
+      return new Response(JSON.stringify({ candidates: [{ content: { role: "model", parts: [{ text: JSON.stringify(answer) }] }, finishReason: "STOP" }] }),
+        { status: 200, headers: { "content-type": "application/json" } });
+    }));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const r = await parseText("قبضت ألفين ونص", "EGP");
+    expect(r.via).toBe("gemini");
+    expect(r.data.income[0].amount).toBe(2500);
+    expect(urls.filter((u) => u.includes("gemini-flash-latest")).length).toBeGreaterThanOrEqual(2);
+    expect(urls.at(-1)).toContain("gemini-flash-lite-latest");
+    warn.mockRestore();
+  }, 20_000);
 });
