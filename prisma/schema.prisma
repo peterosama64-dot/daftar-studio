@@ -28,6 +28,7 @@ model User {
   incomeGoal   Float? // monthly income target, shown on the home page
   quotes       Quote[]
   recurring    RecurringJob[]
+  clientInfos  ClientInfo[]
 }
 
 model Task {
@@ -55,6 +56,7 @@ model Task {
   updatedAt        DateTime   @updatedAt
   deliveries       Delivery[]
   revisions        Revision[]
+  subtasks         Subtask[]
 
   @@index([userId, status])
 }
@@ -167,4 +169,31 @@ model Revision {
   createdAt DateTime @default(now())
 
   @@index([taskId])
+}
+
+// A step inside a task (sketch, colours, export…), ticked off as the work goes.
+model Subtask {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  title     String
+  done      Boolean  @default(false)
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+}
+
+// Contact details and notes for a client. Clients are still identified by the name used on tasks/money.
+model ClientInfo {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name   String
+  phone  String @default("")
+  email  String @default("")
+  notes  String @default("")
+
+  @@unique([userId, name])
 }

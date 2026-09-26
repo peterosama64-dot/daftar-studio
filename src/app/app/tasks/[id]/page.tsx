@@ -10,6 +10,7 @@ import { Button, Card, Field, btnClass, inputClass } from "@/components/ui";
 import { updateTask, deleteTaskAndReturn, startTimer, stopTimer } from "../../actions";
 import { TimerCard } from "@/components/timer-card";
 import { DeliveryCard } from "@/components/delivery-card";
+import { ChecklistCard } from "@/components/checklist-card";
 
 export default async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -64,6 +65,7 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
           <button className="text-sm font-medium text-risk">امسح المهمة</button>
         </form>
       </Card>
+      <ChecklistCard taskId={t.id} />
       <DeliveryCard task={t} />
     </>
   );

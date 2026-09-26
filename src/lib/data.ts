@@ -20,7 +20,7 @@ export async function currencyShort(userId: string) {
 export async function loadMonth(month: string, userId: string) {
   const today = now();
   const [tasks, entries, cur] = await Promise.all([
-    prisma.task.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
+    prisma.task.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, include: { subtasks: { select: { done: true } } } }),
     prisma.entry.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
     currencyShort(userId),
   ]);
