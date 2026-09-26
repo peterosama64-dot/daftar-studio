@@ -191,3 +191,17 @@ describe("income goal", () => {
     expect(goalProgress(9000, 15000, "2026-08", today)).toMatchObject({ reached: false, current: false, daysLeft: 0, perDay: 0, left: 6000 });
   });
 });
+
+import { monthGrid } from "../src/lib/calendar";
+describe("calendar grid", () => {
+  it("starts weeks on Saturday and pads with blanks", () => {
+    const g = monthGrid("2026-09"); // 1 Sep 2026 is a Tuesday
+    expect(g[0].slice(0, 3)).toEqual([null, null, null]);
+    expect(g[0][3]!.getDate()).toBe(1);
+    expect(g.flat().filter(Boolean)).toHaveLength(30);
+    expect(g.every((w) => w.length === 7)).toBe(true);
+  });
+  it("needs no padding when the month starts on Saturday", () => {
+    expect(monthGrid("2026-08")[0][0]!.getDate()).toBe(1); // 1 Aug 2026 is a Saturday
+  });
+});

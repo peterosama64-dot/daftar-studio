@@ -4,7 +4,7 @@ vi.mock("server-only", () => ({}));
 // In-memory prisma for users, tasks, push subscriptions and app settings.
 const db = vi.hoisted(() => ({
   users: new Map<string, { id: string; lastDigest: string | null }>(),
-  tasks: [] as { userId: string; title: string; client: string; due: Date | null; status: string }[],
+  tasks: [] as { userId: string; title: string; client: string; due: Date | null; status: string; agreed?: number; paid?: number }[],
   subs: [] as { id: string; userId: string; endpoint: string; p256dh: string; auth: string }[],
   settings: new Map<string, string>(),
 }));
@@ -13,14 +13,18 @@ vi.mock("../src/lib/db", () => {
   return {
     prisma: {
       user: {
-        findMany: async ({ where }: any) => [...db.users.values()].filter((u) => db.subs.some((s) => s.userId === u.id) && notToday(u, where.OR[1].lastDigest.not)).map((u) => ({ id: u.id })),
+        findMany: async ({ where }: any) => [...db.users.values()].filter((u) => db.subs.some((s) => s.userId === u.id) && notToday(u, where.OR[1].lastDigest.not)).map((u) => ({ id: u.id, currency: "EGP" })),
         updateMany: async ({ where, data }: any) => {
           const u = db.users.get(where.id);
           if (!u || !notToday(u, where.OR[1].lastDigest.not)) return { count: 0 };
           u.lastDigest = data.lastDigest; return { count: 1 };
         },
       },
-      task: { findMany: async ({ where }: any) => db.tasks.filter((t) => t.userId === where.userId && t.status !== "done" && t.due && t.due < where.due.lt) },
+      task: {
+        findMany: async ({ where }: any) => where.agreed
+          ? db.tasks.filter((t) => t.userId === where.userId && (t.agreed ?? 0) > where.agreed.gt).map((t, i) => ({ id: String(i), ...t }))
+          : db.tasks.filter((t) => t.userId === where.userId && t.status !== "done" && t.due && t.due < where.due.lt),
+      },
       pushSubscription: {
         findMany: async ({ where }: any) => db.subs.filter((s) => s.userId === where.userId),
         deleteMany: async ({ where }: any) => { db.subs = db.subs.filter((s) => s.id !== where.id); return { count: 1 }; },
@@ -126,6 +130,20 @@ describe("daily reminder job", () => {
     status = 410;
     await cron(new Request("http://x/api/cron/reminders"));
     expect(db.subs.map((s) => s.id)).toEqual(["s2"]);
+  });
+
+  it("adds what clients owe on Sundays only", async () => {
+    db.tasks.push({ userId: "u1", title: "لوجو", client: "سكر", due: null, status: "done", agreed: 3000, paid: 1000 });
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-09-28T07:00:00Z")); // Monday in Cairo
+      await cron(new Request("http://x/api/cron/reminders"));
+      const u1 = () => JSON.parse(received.filter((r) => r.endpoint.endsWith("/push/one")).at(-1)!.payload).body;
+      expect(u1()).not.toContain("ليك");
+      vi.setSystemTime(new Date("2026-10-04T07:00:00Z")); // Sunday in Cairo; tasks now overdue
+      await cron(new Request("http://x/api/cron/reminders"));
+      expect(u1()).toContain("ليك 2,000 ج.م عند عميل");
+    } finally { vi.useRealTimers(); }
   });
 
   it("requires CRON_SECRET when it is set", async () => {
