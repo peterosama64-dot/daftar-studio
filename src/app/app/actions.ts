@@ -10,6 +10,7 @@ import { requireUser } from "@/lib/auth";
 import { CURRENCIES, PRIORITIES, SOURCES, STATUSES } from "@/lib/constants";
 import { monthKey, parseDay, isMonthKey, now } from "@/lib/dates";
 import { ParsedSchema } from "@/lib/parsed";
+import { parseItems, quoteNotes, quoteNumber, quoteTotal, readItems } from "@/lib/quote";
 
 const done = () => revalidatePath("/app", "layout");
 const str = (f: FormData, k: string, max = 200) => String(f.get(k) ?? "").trim().slice(0, max);
@@ -188,4 +189,48 @@ export async function deleteEverything(f: FormData) {
   if (str(f, "confirm") !== "امسح") return;
   await prisma.$transaction([prisma.task.deleteMany({ where: { userId } }), prisma.entry.deleteMany({ where: { userId } })]);
   done();
+}
+
+// ---------- quotes ----------
+export async function createQuote(f: FormData) {
+  const userId = await requireUser();
+  const title = str(f, "title");
+  const items = parseItems(f.getAll("item_desc"), f.getAll("item_amount"));
+  if (!title || !items.length) return;
+  const validDays = Math.min(365, Math.max(1, Math.round(num(f, "validDays") ?? 14)));
+  const delivery = num(f, "deliveryDays");
+  const q = await prisma.quote.create({
+    data: { userId, title, client: str(f, "client", 80), items, validDays, deliveryDays: delivery ? Math.min(365, Math.round(delivery)) : null, notes: str(f, "notes", 2000) },
+  });
+  revalidatePath("/app/quotes");
+  redirect(`/app/quotes/${q.id}`);
+}
+
+/** The client said yes: make the task (agreed = quote total) once, and link it. */
+export async function acceptQuote(id: string) {
+  const userId = await requireUser();
+  const q = await prisma.quote.findFirst({ where: { id, userId } });
+  if (!q) return;
+  if (q.status !== "accepted") {
+    const items = readItems(q.items);
+    const due = q.deliveryDays ? new Date(now().getTime() + q.deliveryDays * 86_400_000) : null;
+    await prisma.$transaction(async (tx) => {
+      const claimed = await tx.quote.updateMany({ where: { id, userId, status: "draft" }, data: { status: "accepted" } });
+      if (!claimed.count) return;
+      const t = await tx.task.create({
+        data: { userId, title: q.title, client: q.client, agreed: quoteTotal(items), due, notes: quoteNotes(quoteNumber(q), items, q.deliveryDays, q.notes) },
+      });
+      await tx.quote.updateMany({ where: { id, userId }, data: { taskId: t.id } });
+    });
+  }
+  done();
+  const fresh = await prisma.quote.findFirst({ where: { id, userId }, select: { taskId: true } });
+  if (fresh?.taskId) redirect(`/app/tasks/${fresh.taskId}`);
+}
+
+export async function deleteQuote(id: string) {
+  const userId = await requireUser();
+  await prisma.quote.deleteMany({ where: { id, userId } });
+  revalidatePath("/app/quotes");
+  redirect("/app/quotes");
 }

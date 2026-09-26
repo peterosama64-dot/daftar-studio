@@ -163,3 +163,19 @@ describe("money owed", () => {
     expect(r.clients[1].tasks.map((t) => t.title)).toEqual(["لوجو", "منيو"]);
   });
 });
+
+import { parseItems, quoteNotes, quoteNumber, quoteTotal, readItems, validUntil } from "../src/lib/quote";
+describe("quotes", () => {
+  it("reads line items from the form, dropping blanks and bad amounts", () => {
+    const items = parseItems(["لوجو", "", "كروت", "منيو", "سوشيال"], ["3,000", "500", "٧٥٠", "abc", "0"]);
+    expect(items).toEqual([{ desc: "لوجو", amount: 3000 }, { desc: "كروت", amount: 750 }]);
+    expect(quoteTotal(items)).toBe(3750);
+  });
+  it("numbers, dates and notes", () => {
+    const q = { id: "ck123abcd", createdAt: new Date(2026, 8, 26) };
+    expect(quoteNumber(q)).toBe("Q-202609-ABCD");
+    expect(validUntil(q.createdAt, 14).getDate()).toBe(10);
+    expect(readItems([{ desc: "x", amount: 1 }, { bad: 1 }, null])).toEqual([{ desc: "x", amount: 1 }]);
+    expect(quoteNotes("Q-1", [{ desc: "لوجو", amount: 3000 }], 7, "")).toBe("من عرض السعر Q-1:\n- لوجو: 3000\nمدة التسليم: 7 يوم");
+  });
+});

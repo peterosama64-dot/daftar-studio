@@ -13,17 +13,20 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String   @default("")
+  id           String             @id @default(cuid())
+  email        String             @unique
+  name         String             @default("")
   passwordHash String
-  currency     String   @default("EGP")
-  createdAt    DateTime @default(now())
+  currency     String             @default("EGP")
+  createdAt    DateTime           @default(now())
   tasks        Task[]
   entries      Entry[]
   gmail        GmailAccount?
   push         PushSubscription[]
   lastDigest   String? // "YYYY-MM-DD" of the last morning reminder, so the daily job never sends twice
+  lastMonthly  String? // "YYYY-MM" of the last month-summary notification
+  incomeGoal   Float? // monthly income target, shown on the home page
+  quotes       Quote[]
 }
 
 model Task {
@@ -34,7 +37,7 @@ model Task {
   client    String    @default("")
   due       DateTime?
   priority  String    @default("normal") // high | normal | low
-  status    String    @default("todo")   // todo | doing | done
+  status    String    @default("todo") // todo | doing | done
   source    String    @default("manual") // manual | voice | gmail | chat
   notes     String    @default("")
   agreed    Float?
@@ -50,13 +53,13 @@ model Entry {
   id         String    @id @default(cuid())
   userId     String
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  kind       String    // income | subscription | expense
+  kind       String // income | subscription | expense
   name       String
   client     String    @default("")
   amount     Float
   date       DateTime? // income + expense
-  startMonth String?   // subscription: "YYYY-MM"
-  endMonth   String?   // subscription: last billed month, null = active
+  startMonth String? // subscription: "YYYY-MM"
+  endMonth   String? // subscription: last billed month, null = active
   createdAt  DateTime  @default(now())
 
   @@index([userId, kind])
@@ -90,4 +93,22 @@ model PushSubscription {
 model AppSetting {
   key   String @id
   value String
+}
+
+// A price quote sent to a client before the work starts. Accepting it creates a task.
+model Quote {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client       String   @default("")
+  title        String
+  items        Json // [{ desc: string, amount: number }]
+  validDays    Int      @default(14)
+  deliveryDays Int?
+  notes        String   @default("")
+  status       String   @default("draft") // draft | accepted
+  taskId       String?
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
