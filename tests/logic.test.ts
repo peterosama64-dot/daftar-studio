@@ -365,3 +365,23 @@ describe("offline queue", () => {
     expect(readQueue('{"a":1}')).toEqual([]);
   });
 });
+
+import { PLANS, installmentSummary, splitAmount } from "@/lib/installments";
+
+describe("installments", () => {
+  it("splits a price by a plan, the last part taking the rounding", () => {
+    expect(splitAmount(1000, PLANS[1].parts)).toEqual([{ label: "مقدم", amount: 300 }, { label: "نص الشغل", amount: 400 }, { label: "عند التسليم", amount: 300 }]);
+    const odd = splitAmount(1001, PLANS[0].parts);
+    expect(odd.reduce((s, x) => s + x.amount, 0)).toBe(1001);
+  });
+  it("sums planned vs paid, finds the next due and the gap", () => {
+    const d = (n: number) => new Date(2026, 8, n);
+    const s = installmentSummary([
+      { amount: 500, due: d(1), paidAt: d(1) },
+      { amount: 300, due: d(20), paidAt: null },
+      { amount: 200, due: d(10), paidAt: null },
+    ], 1200);
+    expect(s).toMatchObject({ planned: 1000, paid: 500, gap: 200 });
+    expect(s.next?.amount).toBe(200);
+  });
+});

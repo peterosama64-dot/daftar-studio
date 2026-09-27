@@ -8,6 +8,7 @@ const db = vi.hoisted(() => ({
   tasks: [] as { userId: string; title: string; client: string; due: Date | null; status: string; agreed?: number; paid?: number }[],
   subs: [] as { id: string; userId: string; endpoint: string; p256dh: string; auth: string }[],
   settings: new Map<string, string>(),
+  dues: [] as { userId: string; label: string; amount: number; due: Date; paidAt: Date | null; task: { title: string; client: string } }[],
 }));
 vi.mock("../src/lib/db", () => {
   const notToday = (u: { lastDigest: string | null }, key: string) => u.lastDigest === null || u.lastDigest !== key;
@@ -31,6 +32,9 @@ vi.mock("../src/lib/db", () => {
         findMany: async ({ where }: any) => where.agreed
           ? db.tasks.filter((t) => t.userId === where.userId && (t.agreed ?? 0) > where.agreed.gt).map((t, i) => ({ id: String(i), ...t }))
           : db.tasks.filter((t) => t.userId === where.userId && t.status !== "done" && t.due && t.due < where.due.lt),
+      },
+      installment: {
+        findMany: async ({ where }: any) => db.dues.filter((d) => d.userId === where.userId && !d.paidAt && d.due < where.due.lt),
       },
       recurringJob: { findMany: async () => [], updateMany: async () => ({ count: 0 }) },
       entry: { findMany: async ({ where }: any) => db.entries.filter((e) => e.userId === where.userId) },
@@ -186,5 +190,23 @@ describe("daily reminder job", () => {
     expect((await cron(new Request("http://x/api/cron/reminders"))).status).toBe(401);
     expect((await cron(new Request("http://x/api/cron/reminders", { headers: { authorization: "Bearer s3cret" } }))).status).toBe(200);
     delete process.env.CRON_SECRET;
+  });
+});
+
+describe("digest with due payments", () => {
+  const today = new Date(2026, 8, 23); // a Wednesday
+  it("lists due payments with the tasks", () => {
+    const d = buildDigest([{ title: "لوجو", client: "", due: today, status: "todo" }], today, undefined,
+      [{ label: "مقدم", title: "منيو", client: "سكر", amount: 1500 }])!;
+    expect(d.title).toBe("النهارده عندك مهمة");
+    expect(d.body).toContain("دفعات مستحقة: مقدم منيو (سكر) 1,500");
+  });
+  it("speaks even when only a payment is due", () => {
+    const d = buildDigest([], today, undefined, [{ label: "مقدم", title: "منيو", client: "", amount: 500 }, { label: "الباقي", title: "لوجو", client: "", amount: 700 }])!;
+    expect(d.title).toBe("عندك 2 دفعات مستحقة");
+    expect(d.body).toContain("مقدم منيو 500");
+  });
+  it("stays quiet with nothing due", () => {
+    expect(buildDigest([], today, undefined, [])).toBeNull();
   });
 });
