@@ -23,7 +23,7 @@ export function TimerCard({ timeSpent, timerStart, agreed, cur, start, stop }: {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="text-xs text-muted">{started ? "التايمر شغال" : "وقت الشغل"}</div>
-          <div className="font-display text-[22px] font-semibold tabular-nums" aria-live="off">{formatDuration(sec)} <span className="num text-sm font-normal text-muted">{clock}</span></div>
+          <div className="font-display text-[1.375rem] font-semibold tabular-nums" aria-live="off">{formatDuration(sec)} <span className="num text-sm font-normal text-muted">{clock}</span></div>
         </div>
         <form action={started ? stop : start}>
           <Button kind={started ? "primary" : "secondary"} small>{started ? "وقّف التايمر" : sec ? "كمّل التايمر" : "ابدأ التايمر"}</Button>

@@ -12,9 +12,13 @@ export const metadata: Metadata = {
 };
 export const viewport: Viewport = { themeColor: "#f4f3ef", viewportFit: "cover" };
 
+// Runs before first paint so the chosen theme and text size never flash. Values come from cookies set in settings.
+const PREFS = `(function(){try{var c=document.cookie,d=document.documentElement,t=/(?:^|; )theme=(light|dark)/.exec(c),z=/(?:^|; )size=(lg|xl)/.exec(c);if(t)d.dataset.theme=t[1];if(z)d.dataset.size=z[1];}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ar" dir="rtl" className={`${alexandria.variable} ${readex.variable} ${jetbrains.variable}`}>
+    <html lang="ar" dir="rtl" suppressHydrationWarning className={`${alexandria.variable} ${readex.variable} ${jetbrains.variable}`}>
+      <head><script dangerouslySetInnerHTML={{ __html: PREFS }} /></head>
       <body className="min-h-dvh antialiased">{children}</body>
     </html>
   );

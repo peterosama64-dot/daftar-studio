@@ -33,22 +33,22 @@ export default function Landing() {
             قولها <span className="inline-grid h-[.8em] translate-y-[-.05em] place-items-center rounded-[.3em] bg-cyan px-[.3em] align-middle text-on-accent"><MicIcon className="size-[.48em]" /></span> بصوتك،
             <br />والدفتر يرتّب الشغل <span className="num inline-flex translate-y-[-.15em] items-center rounded-[.3em] bg-money-soft px-[.3em] align-middle text-[.42em] font-semibold text-money">+ج.م</span> والفلوس
           </h1>
-          <p className="max-w-[46ch] text-[19px] text-ink2">سجّل مهامك ودخلك واشتراكاتك وانت ماشي. الدفتر بيطلّع الشغل من شات العملاء، وآخر الشهر يقولك خلصت إيه، والمستعجل إيه، وصافي ربحك كام.</p>
+          <p className="max-w-[46ch] text-[1.1875rem] text-ink2">سجّل مهامك ودخلك واشتراكاتك وانت ماشي. الدفتر بيطلّع الشغل من شات العملاء، وآخر الشهر يقولك خلصت إيه، والمستعجل إيه، وصافي ربحك كام.</p>
           <div className="flex flex-wrap items-center gap-4">
             <Link href="/signup" className={btnClass()}>افتح الدفتر ‹</Link>
             <span className="text-sm text-muted">شغال من الموبايل والكمبيوتر، وبالعربي المصري</span>
           </div>
         </div>
         <div className="grid gap-3 rounded-[20px] border border-rule bg-sheet p-5 shadow-float" aria-label="مثال: جملة بالصوت بتتحول لمهام وفلوس">
-          <div className="num flex justify-between text-[11px] text-muted"><span>VOICE NOTE · 00:14</span><span>REV 03</span></div>
+          <div className="num flex justify-between text-[0.6875rem] text-muted"><span>VOICE NOTE · 00:14</span><span>REV 03</span></div>
           <div className="flex items-start gap-3 rounded-2xl bg-paper p-3.5">
             <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-cyan text-on-accent"><MicIcon className="size-[18px]" /></span>
-            <p className="text-[15px] leading-8 text-ink2">لازم أسلّم لوجو كافيه سُكّر الخميس ومستعجل، واستلمت ٧٥٠٠ من مكتبة الكرمة عن الكتالوج، وجددت فيجما بـ ٧٢٠، والمود بورد بتاع عيادة بسمة آخر الشهر.</p>
+            <p className="text-[0.9375rem] leading-8 text-ink2">لازم أسلّم لوجو كافيه سُكّر الخميس ومستعجل، واستلمت ٧٥٠٠ من مكتبة الكرمة عن الكتالوج، وجددت فيجما بـ ٧٢٠، والمود بورد بتاع عيادة بسمة آخر الشهر.</p>
           </div>
           <p className="num text-center text-xs text-muted">↓ sorted</p>
           {items.map(([tone, tag, t, v, c]) => (
             <div key={t} className="flex items-center gap-2.5 rounded-xl border border-rule px-3 py-2.5">
-              <Pill tone={tone}>{tag}</Pill><span className="flex-1 text-[15px]">{t}</span><span className={`num text-sm ${c}`}>{v}</span>
+              <Pill tone={tone}>{tag}</Pill><span className="flex-1 text-[0.9375rem]">{t}</span><span className={`num text-sm ${c}`}>{v}</span>
             </div>
           ))}
         </div>
@@ -65,7 +65,7 @@ export default function Landing() {
             <li key={n} className="grid items-center gap-3 border-b border-dashed border-rule py-6 md:grid-cols-[100px_1fr_1.1fr] md:gap-7">
               <span className="num text-4xl font-bold text-cyan">{n}</span>
               <div><h3 className="mb-1 text-2xl font-bold">{h}</h3><p className="text-ink2">{p}</p></div>
-              <p className="rounded-2xl border border-rule bg-sheet px-4 py-3.5 text-[15px] text-ink2">{ex}</p>
+              <p className="rounded-2xl border border-rule bg-sheet px-4 py-3.5 text-[0.9375rem] text-ink2">{ex}</p>
             </li>
           ))}
         </ol>
@@ -82,7 +82,7 @@ export default function Landing() {
             {[["الدخل", "17,000", ""], ["الاشتراكات", "−2,170", "text-risk"], ["مصاريف تانية", "−600", "text-risk"]].map(([l, v, c]) => (
               <div key={l} className="flex justify-between border-b border-rule py-3"><span>{l}</span><span className={`num ${c}`}>{v}</span></div>
             ))}
-            <div className="flex justify-between border-t-2 border-ink pt-4 font-display text-[22px] font-bold"><span>صافي الربح</span><span className="num text-money">14,230</span></div>
+            <div className="flex justify-between border-t-2 border-ink pt-4 font-display text-[1.375rem] font-bold"><span>صافي الربح</span><span className="num text-money">14,230</span></div>
           </div>
         </div>
       </section>

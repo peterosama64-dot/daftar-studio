@@ -53,7 +53,7 @@ export function ReceiptScan({ defaultDate }: { defaultDate: string }) {
         className={`inline-flex cursor-pointer items-center justify-center gap-1.5 justify-self-start rounded-lg border border-rule bg-sheet px-3 py-1.5 text-sm font-medium hover:bg-sunken ${busy ? "pointer-events-none opacity-60" : ""}`}>
         {busy ? "بقرا الإيصال…" : "📷 صوّر إيصال"}
       </label>
-      {msg && <p role="status" className={`text-[13px] ${msg.err ? "text-risk" : "text-muted"}`}>{msg.text}</p>}
+      {msg && <p role="status" className={`text-[0.8125rem] ${msg.err ? "text-risk" : "text-muted"}`}>{msg.text}</p>}
       {guess && (
         <form action={save} key={`${guess.name}|${guess.amount}`} className="grid gap-2 rounded-xl border border-rule bg-paper p-3 sm:grid-cols-[2fr_1fr_1fr_1fr_auto]">
           <input type="hidden" name="kind" value="expense" />

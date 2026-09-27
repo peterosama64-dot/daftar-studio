@@ -34,7 +34,7 @@ export default async function YearReport({ searchParams }: { searchParams: Promi
       <div className="hidden items-center justify-between border-b border-rule pb-3 print:flex"><Brand href="/app" /><span className="num text-sm text-muted">{year}</span></div>
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold lg:text-[28px]">تقرير سنة <span className="num">{year}</span></h1>
+          <h1 className="text-2xl font-bold lg:text-[1.75rem]">تقرير سنة <span className="num">{year}</span></h1>
           <p className="text-sm text-muted">{y.best ? `أحسن شهر: ${monthName(y.best)}` : "مفيش دخل متسجل في السنة دي"}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 print:hidden">
@@ -52,7 +52,7 @@ export default async function YearReport({ searchParams }: { searchParams: Promi
         <div className="flex h-48 items-end gap-1.5 border-b border-rule print:h-36" role="img" aria-label="الدخل والصرف كل شهر">
           {y.months.map((m) => (
             <div key={m.k} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1">
-              <span className={`num hidden text-[10px] sm:block print:block ${m.net < 0 ? "text-risk" : "text-money"}`}>{m.I || m.S || m.X ? fmt(m.net) : ""}</span>
+              <span className={`num hidden text-[0.625rem] sm:block print:block ${m.net < 0 ? "text-risk" : "text-money"}`}>{m.I || m.S || m.X ? fmt(m.net) : ""}</span>
               <div className="flex w-full items-end justify-center gap-0.5" style={{ height: "80%" }}>
                 <i className="block w-1/3 max-w-5 rounded-t bg-money" style={{ height: `${(m.I / max) * 100}%` }} />
                 <i className="block w-1/3 max-w-5 rounded-t bg-risk-soft" style={{ height: `${((m.S + m.X) / max) * 100}%` }} />
@@ -60,7 +60,7 @@ export default async function YearReport({ searchParams }: { searchParams: Promi
             </div>
           ))}
         </div>
-        <div className="mt-1.5 flex gap-1.5">{y.months.map((m, i) => <span key={m.k} className="min-w-0 flex-1 overflow-hidden text-center text-[10px] text-muted">{AR_MONTHS[i].slice(0, 3)}</span>)}</div>
+        <div className="mt-1.5 flex gap-1.5">{y.months.map((m, i) => <span key={m.k} className="min-w-0 flex-1 overflow-hidden text-center text-[0.625rem] text-muted">{AR_MONTHS[i].slice(0, 3)}</span>)}</div>
         <div className="mt-2 flex gap-4 text-xs text-muted">
           <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-sm bg-money" />دخل</span>
           <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-sm bg-risk-soft" />اشتراكات ومصاريف</span>
@@ -80,7 +80,7 @@ export default async function YearReport({ searchParams }: { searchParams: Promi
           <Card className="grid gap-2.5 p-5 print:p-4">
             <h2 className="text-lg font-bold">أكتر العملاء دخلًا</h2>
             {y.clients.length ? y.clients.map(([name, amt]) => (
-              <div key={name} className="grid grid-cols-[96px_1fr_72px] items-center gap-2.5 text-[13px]">
+              <div key={name} className="grid grid-cols-[96px_1fr_72px] items-center gap-2.5 text-[0.8125rem]">
                 <span className="truncate text-muted">{name}</span>
                 <div className="h-2.5 overflow-hidden rounded bg-paper"><div className="h-full rounded bg-money" style={{ width: `${(amt / topClient) * 100}%` }} /></div>
                 <span className="num text-left text-muted">{fmt(amt)}</span>
@@ -100,7 +100,7 @@ export default async function YearReport({ searchParams }: { searchParams: Promi
           </Card>
         </div>
       </div>
-      <p className="text-[13px] text-muted print:hidden">المبالغ بالـ{cur.short}. <Link href="/app/report" className="text-cyan">تقرير الشهر ‹</Link></p>
+      <p className="text-[0.8125rem] text-muted print:hidden">المبالغ بالـ{cur.short}. <Link href="/app/report" className="text-cyan">تقرير الشهر ‹</Link></p>
     </>
   );
 }

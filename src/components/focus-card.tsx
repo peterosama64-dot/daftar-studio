@@ -97,11 +97,11 @@ export function FocusCard({ taskId, title, timerRunning, start, stopAt }: {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="text-xs text-muted">{mine.phase === "work" ? "تركيز" : "راحة"} · {mine.plan.work}/{mine.plan.rest}</div>
-              <div className="num text-[32px] font-semibold leading-tight" role="timer" aria-live="off">{clock(mine.endsAt - now)}</div>
+              <div className="num text-[2rem] font-semibold leading-tight" role="timer" aria-live="off">{clock(mine.endsAt - now)}</div>
             </div>
             <Button kind="secondary" small type="button" onClick={cancel}>{mine.phase === "work" ? "وقّف التركيز" : "خلّص الراحة"}</Button>
           </div>
-          <p className="text-[13px] text-ink2">{mine.phase === "work" ? "التايمر شغال على المهمة، وهينبهك لما الوقت يخلص." : "قوم اتحرك شوية واشرب مية."}</p>
+          <p className="text-[0.8125rem] text-ink2">{mine.phase === "work" ? "التايمر شغال على المهمة، وهينبهك لما الوقت يخلص." : "قوم اتحرك شوية واشرب مية."}</p>
         </>
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-3">

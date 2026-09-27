@@ -26,7 +26,7 @@ export default async function Tasks({ searchParams }: { searchParams: SP }) {
     const on = src === value;
     const params = new URLSearchParams({ m: month, ...(q ? { q } : {}), ...(value ? { src: value } : {}) });
     return (
-      <Link key={label} href={`/app/tasks?${params}`} className={`rounded-full border px-3 py-1 text-[13px] ${on ? "border-ink bg-ink text-paper" : "border-rule bg-sheet text-ink2"}`}>{label}</Link>
+      <Link key={label} href={`/app/tasks?${params}`} className={`rounded-full border px-3 py-1 text-[0.8125rem] ${on ? "border-ink bg-ink text-paper" : "border-rule bg-sheet text-ink2"}`}>{label}</Link>
     );
   };
   return (

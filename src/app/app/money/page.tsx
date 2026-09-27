@@ -101,7 +101,7 @@ export default async function Money({ searchParams }: { searchParams: SP }) {
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[13px] text-muted">«قبضت الباقي» بيقفل المبلغ في المهمة ويسجّله دخل النهارده. لو قبضت جزء بس، عدّل «اتدفع منه» في المهمة.</p>
+          <p className="mt-2 text-[0.8125rem] text-muted">«قبضت الباقي» بيقفل المبلغ في المهمة ويسجّله دخل النهارده. لو قبضت جزء بس، عدّل «اتدفع منه» في المهمة.</p>
         </Card>
       )}
       <div className="grid items-start gap-5 lg:grid-cols-2">
@@ -193,7 +193,7 @@ export default async function Money({ searchParams }: { searchParams: SP }) {
         <div className="flex h-56 items-end gap-2 border-b border-rule" role="img" aria-label="الدخل والصرف لآخر ست شهور">
           {months.map((m) => (
             <div key={m.k} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
-              <span className={`num text-[11px] ${m.net < 0 ? "text-risk" : "text-money"}`}>{fmt(m.net)}</span>
+              <span className={`num text-[0.6875rem] ${m.net < 0 ? "text-risk" : "text-money"}`}>{fmt(m.net)}</span>
               <div className="flex w-full items-end justify-center gap-1" style={{ height: "80%" }}>
                 <i className="block w-1/3 max-w-6 rounded-t bg-money" style={{ height: `${(m.I / max) * 100}%` }} />
                 <i className="block w-1/3 max-w-6 rounded-t bg-risk-soft" style={{ height: `${(m.out / max) * 100}%` }} />

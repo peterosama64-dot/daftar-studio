@@ -8,7 +8,7 @@ export default async function Signup() {
   if (await currentUserId()) redirect("/app");
   return (
     <>
-      <h1 className="text-[32px] font-extrabold">افتح دفترك</h1>
+      <h1 className="text-[2rem] font-extrabold">افتح دفترك</h1>
       <p className="text-ink2">حساب واحد، وشغلك وفلوسك متسجّلين ليك انت بس.</p>
       <AuthForm mode="signup" />
     </>

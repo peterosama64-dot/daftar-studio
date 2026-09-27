@@ -42,8 +42,8 @@ export function LogoUpload({ url }: { url: string | null }) {
         </label>
         {url && <Button type="button" kind="ghost" small onClick={remove} disabled={busy}>شيله</Button>}
       </div>
-      {err && <p role="alert" className="text-[13px] text-risk">{err}</p>}
-      <p className="text-[13px] text-muted">PNG بخلفية شفافة أحسن حاجة. بيظهر فوق الفاتورة وعرض السعر.</p>
+      {err && <p role="alert" className="text-[0.8125rem] text-risk">{err}</p>}
+      <p className="text-[0.8125rem] text-muted">PNG بخلفية شفافة أحسن حاجة. بيظهر فوق الفاتورة وعرض السعر.</p>
     </div>
   );
 }

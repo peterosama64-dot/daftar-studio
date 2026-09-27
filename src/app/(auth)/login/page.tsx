@@ -10,7 +10,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
   const { next } = await searchParams;
   return (
     <>
-      <h1 className="text-[32px] font-extrabold">أهلاً بيك في الدفتر</h1>
+      <h1 className="text-[2rem] font-extrabold">أهلاً بيك في الدفتر</h1>
       <p className="text-ink2">ادخل عشان تكمّل شغلك من مكان ما سبته.</p>
       <AuthForm mode="login" next={next} />
       <ForgetOffline />

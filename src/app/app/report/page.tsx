@@ -54,7 +54,7 @@ export default async function Report({ searchParams }: { searchParams: SP }) {
           <Card className="grid gap-3 p-5 print:p-4">
             <h2 className="text-lg font-bold">الدخل حسب العميل</h2>
             {clients.length ? clients.slice(0, 6).map(([name, amt]) => (
-              <div key={name} className="grid grid-cols-[88px_1fr_64px] items-center gap-2.5 text-[13px]">
+              <div key={name} className="grid grid-cols-[88px_1fr_64px] items-center gap-2.5 text-[0.8125rem]">
                 <span className="truncate text-muted">{name}</span>
                 <div className="h-2.5 overflow-hidden rounded bg-paper"><div className="h-full rounded bg-money" style={{ width: `${(amt / top) * 100}%` }} /></div>
                 <span className="num text-left text-muted">{fmt(amt)}</span>

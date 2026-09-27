@@ -41,7 +41,7 @@ export default async function Admin() {
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="أرقام عامة">
           {stats.map(([l, n]) => (
             <div key={l} className="grid gap-0.5 rounded-xl border border-rule bg-sheet px-4 py-3">
-              <span className="text-[13px] text-muted">{l}</span>
+              <span className="text-[0.8125rem] text-muted">{l}</span>
               <span dir="ltr" className="num text-xl font-medium text-right">{n}</span>
             </div>
           ))}

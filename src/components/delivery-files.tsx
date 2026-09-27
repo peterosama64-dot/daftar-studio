@@ -19,7 +19,7 @@ export function DeliveryFiles({ files, action }: { files: D[]; action?: (d: D) =
                     ? <img src={f.url} alt={f.name} loading="lazy" className="aspect-square w-full object-contain" />
                     : <span className="grid aspect-square place-items-center text-sm font-semibold text-muted">PDF</span>}
                 </a>
-                <figcaption className="flex items-center gap-1 text-[12px] text-muted">
+                <figcaption className="flex items-center gap-1 text-[0.75rem] text-muted">
                   <span className="min-w-0 flex-1 truncate" dir="auto">{f.name}</span>{action?.(f)}
                 </figcaption>
               </figure>

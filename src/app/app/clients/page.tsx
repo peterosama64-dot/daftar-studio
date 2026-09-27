@@ -50,7 +50,7 @@ export default async function Clients() {
         <Empty>أول ما تسجّل شغل أو فلوس باسم عميل هيظهر هنا لوحده.</Empty>
       ) : (
         <Card className="overflow-x-auto p-2">
-          <table className="w-full min-w-[640px] text-[15px]">
+          <table className="w-full min-w-[640px] text-[0.9375rem]">
             <thead>
               <tr className="border-b-2 border-ink text-right text-sm text-muted">
                 <th className="px-3 py-2.5 font-normal">العميل</th><th className="px-3 py-2.5 font-normal">شغل مفتوح</th>
@@ -73,7 +73,7 @@ export default async function Clients() {
           </table>
         </Card>
       )}
-      <p className="text-[13px] text-muted">«لسه مستحق» بيتحسب من المبلغ المتفق عليه ناقص اللي اتدفع في تفاصيل كل مهمة.</p>
+      <p className="text-[0.8125rem] text-muted">«لسه مستحق» بيتحسب من المبلغ المتفق عليه ناقص اللي اتدفع في تفاصيل كل مهمة.</p>
     </>
   );
 }

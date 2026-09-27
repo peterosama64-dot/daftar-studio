@@ -26,7 +26,7 @@ export function ShareBox({ path, make, revoke, what, label = "لينك للعم�
       <span>أي حد معاه اللينك ده يقدر يشوف {what}. ابعته للعميل على واتساب أو الإيميل:</span>
       <div className="flex flex-wrap items-center gap-2">
         <input readOnly value={url ?? ""} dir="ltr" aria-label="اللينك" onFocus={(e) => e.currentTarget.select()}
-          className="min-w-0 flex-1 rounded-lg border border-rule bg-sheet px-2.5 py-1.5 text-[13px]" />
+          className="min-w-0 flex-1 rounded-lg border border-rule bg-sheet px-2.5 py-1.5 text-[0.8125rem]" />
         <Button small type="button" onClick={copy}>{copied ? "اتنسخ ✓" : "انسخ"}</Button>
         <form action={revoke}><Button kind="ghost" small>وقّف اللينك</Button></form>
       </div>

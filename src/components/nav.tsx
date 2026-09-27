@@ -58,7 +58,7 @@ export function TabBar() {
   const tab = (href: string, label: string, on: boolean) => (
     <Link href={withMonth(href, m)} aria-current={on ? "page" : undefined} className="flex flex-1 flex-col items-center gap-1.5 py-1">
       <span className={`h-[3px] w-6 rounded ${on ? "bg-cyan" : "bg-transparent"}`} />
-      <span className={`text-[11px] ${on ? "font-semibold text-ink" : "text-muted"}`}>{label}</span>
+      <span className={`text-[0.6875rem] ${on ? "font-semibold text-ink" : "text-muted"}`}>{label}</span>
     </Link>
   );
   return (
