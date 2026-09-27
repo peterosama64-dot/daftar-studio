@@ -12,6 +12,7 @@ import { Button, Card, Empty, Field, Pill, btnClass, inputClass } from "@/compon
 import { saveClientInfo, sharePortal, unsharePortal } from "../../actions";
 import { ShareBox } from "@/components/share-box";
 import { RemindButton } from "@/components/remind-button";
+import { rateReport } from "@/lib/rates";
 
 const clientName = (raw: string) => {
   try { return decodeURIComponent(raw).slice(0, 80); } catch { return raw.slice(0, 80); }
@@ -38,6 +39,7 @@ export default async function ClientPage({ params }: { params: Promise<{ name: s
   const thisYear = income.filter((e) => e.date && e.date.getFullYear() === year).reduce((s, e) => s + e.amount, 0);
   const owed = tasks.reduce((s, t) => s + (t.agreed ? Math.max(0, t.agreed - (t.paid ?? 0)) : 0), 0);
   const open = tasks.filter((t) => t.status !== "done");
+  const rate = rateReport(tasks);
   const wa = info?.phone ? whatsappLink(info.phone) : null;
   const stat = (k: string, v: string, c = "") => (
     <div className="grid gap-0.5 rounded-xl border border-rule bg-sheet px-4 py-3"><span className="text-[13px] text-muted">{k}</span><span className={`num text-xl font-medium ${c}`}>{v}</span></div>
@@ -58,6 +60,11 @@ export default async function ClientPage({ params }: { params: Promise<{ name: s
         {stat("لسه عليه", fmt(owed), owed ? "text-wait" : "")}
         {stat("شغل مفتوح", String(open.length))}
       </section>
+      {rate.overall !== null && (
+        <p className="text-sm text-muted">
+          ساعتك مع العميل ده جابت <span className="num font-medium text-ink">{fmt(rate.overall)}</span> {cur.short} في المتوسط ({rate.jobs} شغلانة متسجّل وقتها) — <Link href="/app/report/rates" className="text-cyan">قارن بباقي العملاء</Link>
+        </p>
+      )}
       <div className="grid gap-2">
         <ShareBox path={info?.portalToken ? `/s/c/${info.portalToken}` : null} what="كل عروضه وفواتيره وتسليماته" make={sharePortal.bind(null, name)} revoke={unsharePortal.bind(null, name)} label="لينك ملف العميل" />
         {owed > 0 && <RemindButton client={name} />}
