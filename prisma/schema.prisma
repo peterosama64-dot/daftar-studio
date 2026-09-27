@@ -40,6 +40,7 @@ model User {
   payInfo      String             @default("") // how to pay: InstaPay, wallet, bank account…
   fxRates      String             @default("{}") // JSON {"USD": 48.5}: 1 unit = this many of the main currency
   leads        Lead[]
+  budgets      String             @default("{}") // JSON {"print": 500}: monthly spending limit per expense category
 }
 
 model Task {
@@ -88,6 +89,7 @@ model Entry {
   createdAt    DateTime  @default(now())
   origAmount   Float? // when entered in another currency: the amount as typed (amount itself is always in the main currency)
   origCurrency String?
+  category     String? // expense/subscription category key (lib/categories.ts); null = uncategorised
 
   @@index([userId, kind])
 }

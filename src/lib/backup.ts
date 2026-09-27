@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { prisma } from "./db";
 import { CURRENCIES } from "./constants";
+import { CATEGORY_KEYS } from "./categories";
 
 // A full copy of one account's notebook as JSON, and restoring it (into the same or another account).
 // Left out on purpose: password, Gmail tokens, notification subscriptions and every share link
@@ -13,7 +14,7 @@ export const BACKUP_VERSION = 1;
 
 export async function buildBackup(userId: string) {
   const [user, tasks, entries, quotes, recurring, clients, templates] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { name: true, currency: true, fxRates: true, incomeGoal: true, logoUrl: true, bizPhone: true, bizAddress: true, payInfo: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { name: true, currency: true, fxRates: true, budgets: true, incomeGoal: true, logoUrl: true, bizPhone: true, bizAddress: true, payInfo: true } }),
     prisma.task.findMany({
       where: { userId }, orderBy: { createdAt: "asc" },
       include: {
@@ -40,7 +41,7 @@ export async function buildBackup(userId: string) {
     })),
     entries: entries.map((e) => ({
       ref: e.id, kind: e.kind, name: e.name, client: e.client, amount: e.amount, date: e.date, startMonth: e.startMonth, endMonth: e.endMonth,
-      origAmount: e.origAmount, origCurrency: e.origCurrency, createdAt: e.createdAt,
+      origAmount: e.origAmount, origCurrency: e.origCurrency, category: e.category, createdAt: e.createdAt,
     })),
     quotes: quotes.map((q) => ({
       client: q.client, title: q.title, items: q.items, validDays: q.validDays, deliveryDays: q.deliveryDays, notes: q.notes, status: q.status,
@@ -65,7 +66,7 @@ export const BackupSchema = z.object({
   version: z.number().int().min(1).max(BACKUP_VERSION),
   profile: z.object({
     name: s(80).default(""), currency: z.enum(CURRENCIES.map((c) => c.code) as [string, ...string[]]).default("EGP"),
-    fxRates: s(500).default("{}"), incomeGoal: money.nullable().default(null),
+    fxRates: s(500).default("{}"), budgets: s(1000).default("{}"), incomeGoal: money.nullable().default(null),
     logoUrl: z.string().max(500).refine((u) => /^https:\/\//.test(u) || u.startsWith("/api/files/local/")).nullable().default(null),
     bizPhone: s(40).default(""), bizAddress: s(200).default(""), payInfo: s(600).default(""),
   }).nullable().default(null),
@@ -84,7 +85,8 @@ export const BackupSchema = z.object({
   entries: arr(z.object({
     ref: s(64), kind: z.enum(["income", "subscription", "expense"]), name: s(120).min(1), client: s(80).default(""), amount: money,
     date: optDate, startMonth: s(7).nullable().default(null), endMonth: s(7).nullable().default(null),
-    origAmount: money.nullable().optional().transform((v) => v ?? null), origCurrency: cur, createdAt: date,
+    origAmount: money.nullable().optional().transform((v) => v ?? null), origCurrency: cur,
+    category: z.enum(CATEGORY_KEYS as [string, ...string[]]).nullable().optional().transform((v) => v ?? null), createdAt: date,
   }), 50_000),
   quotes: arr(z.object({
     client: s(80).default(""), title: s(200).min(1), items: z.array(z.object({ desc: s(300), amount: money })).max(50),

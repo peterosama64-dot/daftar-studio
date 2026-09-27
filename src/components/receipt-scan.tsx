@@ -4,8 +4,9 @@ import { useRef, useState } from "react";
 import { addEntry } from "@/app/app/actions";
 import { shrink } from "./file-uploader";
 import { Button, inputClass } from "./ui";
+import { CATEGORIES } from "@/lib/categories";
 
-type Guess = { name: string; amount: string; date: string };
+type Guess = { name: string; amount: string; date: string; category: string };
 
 /** «صوّر إيصال»: photo → AI reads the total → the user checks it and saves it as an expense. */
 export function ReceiptScan({ defaultDate }: { defaultDate: string }) {
@@ -24,11 +25,11 @@ export function ReceiptScan({ defaultDate }: { defaultDate: string }) {
       const j = await res.json().catch(() => ({}));
       if (!res.ok) { setMsg({ text: j.error ?? "حصلت مشكلة، جرّب تاني.", err: true }); return; }
       if (!j.found) {
-        setGuess({ name: "", amount: "", date: defaultDate });
+        setGuess({ name: "", amount: "", date: defaultDate, category: "" });
         setMsg({ text: "مقدرتش أقرا المبلغ من الصورة. اكتبه بإيدك أو صوّر تاني في نور أحسن.", err: true });
         return;
       }
-      setGuess({ name: j.name, amount: String(j.amount), date: j.date || defaultDate });
+      setGuess({ name: j.name, amount: String(j.amount), date: j.date || defaultDate, category: j.category || "" });
       setMsg({ text: "قريت الإيصال — راجع الأرقام واحفظ." });
     } catch {
       setMsg({ text: "مفيش نت أو حصلت مشكلة، جرّب تاني.", err: true });
@@ -54,10 +55,14 @@ export function ReceiptScan({ defaultDate }: { defaultDate: string }) {
       </label>
       {msg && <p role="status" className={`text-[13px] ${msg.err ? "text-risk" : "text-muted"}`}>{msg.text}</p>}
       {guess && (
-        <form action={save} key={`${guess.name}|${guess.amount}`} className="grid gap-2 rounded-xl border border-rule bg-paper p-3 sm:grid-cols-[2fr_1fr_1fr_auto]">
+        <form action={save} key={`${guess.name}|${guess.amount}`} className="grid gap-2 rounded-xl border border-rule bg-paper p-3 sm:grid-cols-[2fr_1fr_1fr_1fr_auto]">
           <input type="hidden" name="kind" value="expense" />
           <input name="name" required defaultValue={guess.name} placeholder="المصروف" className={inputClass} aria-label="المصروف من الإيصال" />
           <input name="amount" required inputMode="decimal" defaultValue={guess.amount} placeholder="المبلغ" className={`${inputClass} num text-left`} aria-label="المبلغ من الإيصال" />
+          <select name="category" defaultValue={guess.category} aria-label="تصنيف الإيصال" className={inputClass}>
+            <option value="">التصنيف</option>
+            {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+          </select>
           <input name="date" type="date" defaultValue={guess.date} className={inputClass} aria-label="تاريخ الإيصال" />
           <Button small>احفظ المصروف</Button>
         </form>

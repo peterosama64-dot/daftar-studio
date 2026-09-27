@@ -40,5 +40,6 @@ export async function POST(req: Request) {
     name: (foreign ? `${r.name} (${r.currency.toUpperCase()})` : r.name).slice(0, 120),
     amount: Math.round(r.amount * 100) / 100,
     date: parseDay(r.date) ? r.date : "",
+    category: r.category ?? "",
   });
 }

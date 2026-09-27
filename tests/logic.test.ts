@@ -464,3 +464,27 @@ describe("leads", () => {
     expect(s).toEqual({ open: 2, value: 1500, winRate: 50, closed: 2 });
   });
 });
+
+import { parseBudgets, pickCategory, spendByCategory } from "@/lib/categories";
+
+describe("expense categories and budgets", () => {
+  const e = (kind: string, amount: number, category: string | null, extra = {}) =>
+    ({ kind, name: "x", client: "", amount, date: new Date(2026, 8, 10), startMonth: null, endMonth: null, category, ...extra });
+  it("sums a month's spending per category with budgets", () => {
+    const rows = spendByCategory([
+      e("expense", 300, "print"), e("expense", 400, "print"), e("expense", 50, null),
+      e("subscription", 700, "software", { date: null, startMonth: "2026-01" }),
+      e("expense", 999, "print", { date: new Date(2026, 7, 1) }), e("income", 5000, null),
+    ], "2026-09", { print: 500, ads: 1000 });
+    expect(rows.map((r) => [r.key, r.spent, r.budget, r.over])).toEqual([
+      ["print", 700, 500, true], ["software", 700, null, false], [null, 50, null, false], ["ads", 0, 1000, false],
+    ]);
+    expect(rows[0].pct).toBe(140);
+  });
+  it("parses budgets and picks categories", () => {
+    expect(parseBudgets('{"print": 500, "bad": 3, "ads": -1}')).toEqual({ print: 500 });
+    expect(pickCategory("print", "expense")).toBe("print");
+    expect(pickCategory("hack", "expense")).toBeNull();
+    expect(pickCategory("", "subscription")).toBe("software");
+  });
+});
