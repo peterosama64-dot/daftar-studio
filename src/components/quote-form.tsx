@@ -5,7 +5,9 @@ import { Button, Field, inputClass } from "./ui";
 import { createQuote } from "@/app/app/actions";
 
 /** New quote: title, client, any number of line items with a live total, validity and delivery. */
-export function QuoteForm({ cur }: { cur: string }) {
+export function QuoteForm({ currencies, base }: { currencies: { code: string; short: string }[]; base: string }) {
+  const [code, setCode] = useState(base);
+  const cur = currencies.find((c) => c.code === code)?.short ?? "";
   const [rows, setRows] = useState([{ k: 0, amount: "" }, { k: 1, amount: "" }]);
   const total = rows.reduce((s, r) => s + (Number(r.amount.replace(/[,٬\s]/g, "")) || 0), 0);
   return (
@@ -34,6 +36,13 @@ export function QuoteForm({ cur }: { cur: string }) {
         <Field label="العرض ساري لمدة (يوم)"><input name="validDays" inputMode="numeric" defaultValue={14} className={`${inputClass} num text-left`} /></Field>
         <Field label="مدة التسليم (يوم)"><input name="deliveryDays" inputMode="numeric" placeholder="اختياري" className={`${inputClass} num text-left`} /></Field>
       </div>
+      {currencies.length > 1 && (
+        <Field label="العملة">
+          <select name="currency" value={code} onChange={(e) => setCode(e.target.value)} className={inputClass}>
+            {currencies.map((c) => <option key={c.code} value={c.code}>{c.short}</option>)}
+          </select>
+        </Field>
+      )}
       <Field label="شروط أو ملاحظات"><textarea name="notes" rows={3} placeholder="٥٠٪ مقدم والباقي عند التسليم" className={inputClass} /></Field>
       <Button>اعمل عرض السعر</Button>
     </form>

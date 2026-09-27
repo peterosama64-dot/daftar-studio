@@ -4,6 +4,7 @@ import { dayKey, monthName, now, shiftMonth, monthKey } from "@/lib/dates";
 import { monthTotals } from "@/lib/money";
 import { buildDigest, buildMonthly } from "@/lib/reminders";
 import { owedByClient } from "@/lib/owed";
+import { makeFx, parseRates } from "@/lib/fx";
 import { CURRENCIES } from "@/lib/constants";
 import { pushToUser } from "@/lib/push";
 import { runRecurring } from "@/lib/recurring";
@@ -24,7 +25,7 @@ export async function GET(req: Request) {
   const tomorrowEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2);
   const users = await prisma.user.findMany({
     where: { push: { some: {} }, suspendedAt: null, OR: [{ lastDigest: null }, { lastDigest: { not: key } }] },
-    select: { id: true, currency: true },
+    select: { id: true, currency: true, fxRates: true },
   });
 
   let sent = 0, quiet = 0;
@@ -39,7 +40,7 @@ export async function GET(req: Request) {
     });
     // Money owed only goes into Sunday's reminder, so only read it then.
     const owed = today.getDay() === 0
-      ? owedByClient(await prisma.task.findMany({ where: { userId: u.id, agreed: { gt: 0 } }, select: { id: true, title: true, client: true, agreed: true, paid: true } }))
+      ? owedByClient(await prisma.task.findMany({ where: { userId: u.id, agreed: { gt: 0 } }, select: { id: true, title: true, client: true, agreed: true, paid: true, currency: true } }), makeFx(u.currency, parseRates(u.fxRates)).toBase)
       : null;
     const currency = CURRENCIES.find((c) => c.code === u.currency)?.short ?? "ج.م";
     const dues = (await prisma.installment.findMany({

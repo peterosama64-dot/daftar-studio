@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { portalFor } from "@/lib/portal";
+import { curShort } from "@/lib/fx";
 import { quoteExpired, quoteNumber, quoteTotal, readItems, validUntil } from "@/lib/quote";
 import { safeFileName } from "@/lib/invoice";
 import { QuoteDoc } from "@/components/docs";
@@ -32,7 +33,7 @@ export default async function PortalQuote({ params }: { params: Promise<{ token:
         <PrintButton file={safeFileName(`عرض-سعر-${no}`)} />
       </div>
       <QuoteDoc no={no} created={q.createdAt} validUntil={validUntil(q.createdAt, q.validDays)} from={p.user} client={q.client} title={q.title}
-        items={items} total={quoteTotal(items)} deliveryDays={q.deliveryDays} notes={q.notes} cur={p.cur} />
+        items={items} total={quoteTotal(items)} deliveryDays={q.deliveryDays} notes={q.notes} cur={curShort(q.currency ?? p.user.currency)} />
     </>
   );
 }

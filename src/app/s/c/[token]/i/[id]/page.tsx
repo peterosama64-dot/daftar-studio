@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { portalFor } from "@/lib/portal";
+import { curShort } from "@/lib/fx";
 import { invoiceNumber, invoiceTotals, safeFileName } from "@/lib/invoice";
 import { now } from "@/lib/dates";
 import { InvoiceDoc } from "@/components/docs";
@@ -22,7 +23,7 @@ export default async function PortalInvoice({ params }: { params: Promise<{ toke
         <Link href={`/s/c/${token}`} className="text-sm text-cyan">› كل الملف</Link>
         <PrintButton file={safeFileName(`فاتورة-${no}`)} />
       </div>
-      <InvoiceDoc no={no} issued={now()} from={p.user} client={t.client} title={t.title} {...invoiceTotals(t.agreed, t.paid)} cur={p.cur} />
+      <InvoiceDoc no={no} issued={now()} from={p.user} client={t.client} title={t.title} {...invoiceTotals(t.agreed, t.paid)} cur={curShort(t.currency ?? p.user.currency)} />
     </>
   );
 }

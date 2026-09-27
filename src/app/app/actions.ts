@@ -15,7 +15,8 @@ import { parseItems } from "@/lib/quote";
 import { acceptQuoteFor, newToken } from "@/lib/share";
 import { removeFile } from "@/lib/files";
 import { whatsappLink } from "@/lib/contact";
-import { currencyShort } from "@/lib/data";
+import { loadFx } from "@/lib/data";
+import { pickCurrency, type Fx } from "@/lib/fx";
 import type { ReminderData } from "@/lib/remind";
 
 const done = () => revalidatePath("/app", "layout");
@@ -76,7 +77,7 @@ export async function deleteTaskAndReturn(id: string) {
 
 export async function updateTask(id: string, f: FormData) {
   const userId = await requireUser();
-  const prev = await prisma.task.findFirst({ where: { id, userId } });
+  const [prev, fx] = await Promise.all([prisma.task.findFirst({ where: { id, userId } }), loadFx(userId)]);
   if (!prev) return;
   const status = oneOf(STATUSES, str(f, "status"), "todo");
   await prisma.task.updateMany({
@@ -91,15 +92,22 @@ export async function updateTask(id: string, f: FormData) {
       notes: str(f, "notes", 4000),
       agreed: num(f, "agreed"),
       paid: num(f, "paid"),
+      ...(f.has("currency") ? { currency: pickCurrency(fx, str(f, "currency", 3)) } : {}),
     },
   });
   done();
 }
 
+/** An income row for money received on a job: stored in the main currency, keeping what was typed if it was another. */
+const incomeFrom = (fx: Fx, amount: number, currency: string | null) => {
+  const foreign = fx.of(currency) !== fx.base;
+  return { amount: fx.toBase(amount, currency), ...(foreign ? { origAmount: amount, origCurrency: fx.of(currency) } : {}) };
+};
+
 /** «قبضت الباقي»: mark a task fully paid and record the remaining amount as income today. */
 export async function collectRemaining(id: string) {
   const userId = await requireUser();
-  const t = await prisma.task.findFirst({ where: { id, userId } });
+  const [t, fx] = await Promise.all([prisma.task.findFirst({ where: { id, userId } }), loadFx(userId)]);
   if (!t?.agreed) return;
   const remaining = t.agreed - (t.paid ?? 0);
   if (remaining <= 0) return;
@@ -107,7 +115,7 @@ export async function collectRemaining(id: string) {
   await prisma.$transaction(async (tx) => {
     const claimed = await tx.task.updateMany({ where: { id, userId, paid: t.paid }, data: { paid: t.agreed } });
     if (!claimed.count) return;
-    await tx.entry.create({ data: { userId, kind: "income", name: t.title.slice(0, 120), client: t.client, amount: remaining, date: now() } });
+    await tx.entry.create({ data: { userId, kind: "income", name: t.title.slice(0, 120), client: t.client, date: now(), ...incomeFrom(fx, remaining, t.currency) } });
     // Whatever payments were still planned are covered by this one.
     await tx.installment.updateMany({ where: { taskId: id, userId, paidAt: null }, data: { paidAt: now() } });
   });
@@ -122,10 +130,12 @@ export async function addEntry(f: FormData) {
   const amount = num(f, "amount");
   if (!name || amount === null || !["income", "subscription", "expense"].includes(kind)) return;
   const month = str(f, "month", 7);
+  const fx = await loadFx(userId);
+  const money = incomeFrom(fx, amount, pickCurrency(fx, str(f, "currency", 3)));
   await prisma.entry.create({
     data: kind === "subscription"
-      ? { userId, kind, name, amount, startMonth: isMonthKey(month) ? month : monthKey(now()) }
-      : { userId, kind, name, amount, client: str(f, "client", 80), date: parseDay(str(f, "date", 10)) ?? now() },
+      ? { userId, kind, name, ...money, startMonth: isMonthKey(month) ? month : monthKey(now()) }
+      : { userId, kind, name, ...money, client: str(f, "client", 80), date: parseDay(str(f, "date", 10)) ?? now() },
   });
   done();
 }
@@ -205,6 +215,20 @@ export async function setName(f: FormData) {
   done();
 }
 
+/** Exchange rates: how much of the main currency one unit of each other currency is worth. */
+export async function setRates(f: FormData) {
+  const userId = await requireUser();
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { currency: true } });
+  const rates: Record<string, number> = {};
+  for (const c of CURRENCIES) {
+    if (c.code === u?.currency) continue;
+    const v = num(f, `rate_${c.code}`);
+    if (v && v > 0 && v < 1e6) rates[c.code] = v;
+  }
+  await prisma.user.update({ where: { id: userId }, data: { fxRates: JSON.stringify(rates) } });
+  done();
+}
+
 export async function deleteEverything(f: FormData) {
   const userId = await requireUser();
   if (str(f, "confirm") !== "امسح") return;
@@ -220,8 +244,9 @@ export async function createQuote(f: FormData) {
   if (!title || !items.length) return;
   const validDays = Math.min(365, Math.max(1, Math.round(num(f, "validDays") ?? 14)));
   const delivery = num(f, "deliveryDays");
+  const fx = await loadFx(userId);
   const q = await prisma.quote.create({
-    data: { userId, title, client: str(f, "client", 80), items, validDays, deliveryDays: delivery ? Math.min(365, Math.round(delivery)) : null, notes: str(f, "notes", 2000) },
+    data: { userId, title, client: str(f, "client", 80), items, validDays, currency: pickCurrency(fx, str(f, "currency", 3)), deliveryDays: delivery ? Math.min(365, Math.round(delivery)) : null, notes: str(f, "notes", 2000) },
   });
   revalidatePath("/app/quotes");
   redirect(`/app/quotes/${q.id}`);
@@ -425,19 +450,23 @@ export async function prepareReminder(client: string): Promise<ReminderData | nu
   // Only fills a missing token, so a link the client already has keeps working.
   await Promise.all(tasks.filter((t) => !t.shareToken).map((t) =>
     prisma.task.updateMany({ where: { id: t.id, userId, shareToken: null }, data: { shareToken: newToken() } })));
-  const [fresh, user, info, cur] = await Promise.all([
+  const [fresh, user, info, fx] = await Promise.all([
     prisma.task.findMany({ where: { id: { in: tasks.map((t) => t.id) }, userId }, select: { id: true, shareToken: true } }),
     prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
     prisma.clientInfo.findUnique({ where: { userId_name: { userId, name } }, select: { phone: true } }),
-    currencyShort(userId),
+    loadFx(userId),
   ]);
   const token = new Map(fresh.map((t) => [t.id, t.shareToken]));
+  const codes = new Set(tasks.map((t) => fx.of(t.currency)));
+  const one = codes.size === 1 ? [...codes][0] : fx.base;
+  const rem = (t: (typeof tasks)[number]) => (t.agreed ?? 0) - (t.paid ?? 0);
   return {
     client: name,
     sender: user?.name ?? "",
-    cur: cur.short,
+    cur: fx.short(one),
+    total: tasks.reduce((s, t) => s + (codes.size === 1 ? rem(t) : fx.toBase(rem(t), t.currency)), 0),
     phone: info?.phone ? whatsappLink(info.phone) : null,
-    tasks: tasks.map((t) => ({ title: t.title, remaining: (t.agreed ?? 0) - (t.paid ?? 0), path: `/s/i/${token.get(t.id)}` })),
+    tasks: tasks.map((t) => ({ title: t.title, remaining: rem(t), cur: fx.short(t.currency), path: `/s/i/${token.get(t.id)}` })),
   };
 }
 
@@ -471,12 +500,15 @@ export async function saveInstallments(taskId: string, f: FormData) {
 /** Marks a payment received: adds it to what the task has been paid and records it as income, once. */
 export async function payInstallment(id: string) {
   const userId = await requireUser();
-  const x = await prisma.installment.findFirst({ where: { id, userId }, include: { task: { select: { title: true, client: true } } } });
+  const [x, fx] = await Promise.all([
+    prisma.installment.findFirst({ where: { id, userId }, include: { task: { select: { title: true, client: true, currency: true } } } }),
+    loadFx(userId),
+  ]);
   if (!x || x.paidAt) return;
   await prisma.$transaction(async (tx) => {
     const claimed = await tx.installment.updateMany({ where: { id, userId, paidAt: null }, data: { paidAt: now() } });
     if (!claimed.count) return;
-    const e = await tx.entry.create({ data: { userId, kind: "income", name: `${x.task.title} — ${x.label}`.slice(0, 120), client: x.task.client, amount: x.amount, date: now() } });
+    const e = await tx.entry.create({ data: { userId, kind: "income", name: `${x.task.title} — ${x.label}`.slice(0, 120), client: x.task.client, date: now(), ...incomeFrom(fx, x.amount, x.task.currency) } });
     await tx.installment.update({ where: { id }, data: { entryId: e.id } });
     // COALESCE: a task with nothing paid yet has paid = NULL, and NULL + x stays NULL.
     await tx.$executeRaw`UPDATE "Task" SET "paid" = COALESCE("paid", 0) + ${x.amount} WHERE "id" = ${x.taskId} AND "userId" = ${userId}`;

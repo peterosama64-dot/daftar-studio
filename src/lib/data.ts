@@ -3,6 +3,7 @@ import { CURRENCIES } from "./constants";
 import { isMonthKey, monthKey, now } from "./dates";
 import { monthTotals } from "./money";
 import { bucket, byDue } from "./tasks";
+import { makeFx, parseRates } from "./fx";
 
 export type SP = Promise<Record<string, string | string[] | undefined>>;
 
@@ -30,4 +31,10 @@ export async function loadMonth(month: string, userId: string) {
     .filter((t) => t.status === "done" && (!t.doneAt || monthKey(t.doneAt) === month))
     .sort((a, b) => (b.doneAt?.getTime() ?? 0) - (a.doneAt?.getTime() ?? 0));
   return { today, tasks, entries, urgent, later, doneThisMonth, totals: monthTotals(entries, month), cur };
+}
+
+/** The account's main currency and exchange rates, for converting other-currency jobs and entries. */
+export async function loadFx(userId: string) {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { currency: true, fxRates: true } });
+  return makeFx(u?.currency ?? "EGP", parseRates(u?.fxRates));
 }

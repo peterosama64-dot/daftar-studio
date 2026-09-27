@@ -9,13 +9,14 @@ import { aiEnabled, aiName } from "@/lib/ai";
 import { isAdmin } from "@/lib/admin";
 import { NotifyCard } from "@/components/notify-card";
 import { LogoUpload } from "@/components/logo-upload";
-import { setCurrency, setName, deleteEverything } from "../actions";
+import { setCurrency, setName, setRates, deleteEverything } from "../actions";
+import { parseRates } from "@/lib/fx";
 
 export const metadata = { title: "الإعدادات" };
 
 export default async function Settings() {
   const uid = await requireUser();
-  const [cur, user, admin, gmail] = await Promise.all([getCurrency(uid), prisma.user.findUnique({ where: { id: uid }, select: { email: true, name: true, logoUrl: true, bizPhone: true, bizAddress: true, payInfo: true } }), isAdmin(uid), prisma.gmailAccount.findUnique({ where: { userId: uid }, select: { id: true } })]);
+  const [cur, user, admin, gmail] = await Promise.all([getCurrency(uid), prisma.user.findUnique({ where: { id: uid }, select: { email: true, name: true, fxRates: true, logoUrl: true, bizPhone: true, bizAddress: true, payInfo: true } }), isAdmin(uid), prisma.gmailAccount.findUnique({ where: { userId: uid }, select: { id: true } })]);
   const row = (name: string, desc: string, right: React.ReactNode) => (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule py-4 last:border-b-0">
       <div className="min-w-0"><div className="font-display font-semibold">{name}</div><p className="text-sm text-muted">{desc}</p></div>
@@ -59,6 +60,20 @@ export default async function Settings() {
               </select>
             </Field>
             <Button small>احفظ</Button>
+          </form>
+        </Card>
+        <Card className="p-5">
+          <h2 className="mb-1 text-lg font-bold">أسعار الصرف</h2>
+          <p className="mb-3 text-sm text-muted">لو بتشتغل بعملة تانية: حط سعرها، وتقدر تختارها في المهمة أو عرض السعر أو الدخل. كل التقارير بتتحسب بعملتك الأساسية.</p>
+          <form action={setRates} className="grid gap-3">
+            {CURRENCIES.filter((c) => c.code !== cur).map((c) => (
+              <label key={c.code} className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="w-24">١ {c.label}</span><span className="text-muted">=</span>
+                <input name={`rate_${c.code}`} inputMode="decimal" defaultValue={parseRates(user?.fxRates)[c.code] ?? ""} placeholder="—" aria-label={`سعر ${c.label}`} className={`${inputClass} num w-28 text-left`} />
+                <span className="text-muted">{CURRENCIES.find((x) => x.code === cur)?.short}</span>
+              </label>
+            ))}
+            <Button small className="justify-self-start">احفظ الأسعار</Button>
           </form>
         </Card>
         <Card className="p-5">

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PageHead } from "@/components/month";
 import { Card, Empty } from "@/components/ui";
 import { prisma } from "@/lib/db";
-import { currencyShort } from "@/lib/data";
+import { currencyShort, loadFx } from "@/lib/data";
 import { fmt } from "@/lib/money";
 import { monthKey, shortDate, now as nowTz } from "@/lib/dates";
 import { clientHref } from "@/lib/contact";
@@ -13,10 +13,11 @@ export const metadata = { title: "العملاء" };
 /** Clients are derived from the names used on tasks and income rows. */
 export default async function Clients() {
   const uid = await requireUser();
-  const [tasks, income, cur] = await Promise.all([
+  const [tasks, income, cur, fx] = await Promise.all([
     prisma.task.findMany({ where: { userId: uid } }),
     prisma.entry.findMany({ where: { userId: uid, kind: "income" }, orderBy: { date: "desc" } }),
     currencyShort(uid),
+    loadFx(uid),
   ]);
   const now = nowTz();
   const thisMonth = monthKey(now), thisYear = now.getFullYear();
@@ -31,7 +32,7 @@ export default async function Clients() {
     const r = get(t.client);
     if (t.status !== "done") r.open++;
     else if (t.doneAt && (!r.lastDone || t.doneAt > r.lastDone)) r.lastDone = t.doneAt;
-    if (t.agreed) r.owed += Math.max(0, t.agreed - (t.paid ?? 0));
+    if (t.agreed) r.owed += fx.toBase(Math.max(0, t.agreed - (t.paid ?? 0)), t.currency);
   }
   for (const e of income) {
     if (!e.client) continue;

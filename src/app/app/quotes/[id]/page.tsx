@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { currencyShort } from "@/lib/data";
+import { loadFx } from "@/lib/data";
 import { quoteNumber, quoteTotal, readItems, validUntil } from "@/lib/quote";
 import { safeFileName } from "@/lib/invoice";
 import { Button, btnClass } from "@/components/ui";
@@ -21,7 +21,7 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
   const [q, user, cur] = await Promise.all([
     prisma.quote.findFirst({ where: { id, userId: uid } }),
     prisma.user.findUnique({ where: { id: uid }, select: PARTY_SELECT }),
-    currencyShort(uid),
+    loadFx(uid),
   ]);
   if (!q) notFound();
   const items = readItems(q.items);
@@ -46,7 +46,7 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
         </div>
       )}
       <QuoteDoc no={no} created={q.createdAt} validUntil={validUntil(q.createdAt, q.validDays)} from={user ?? noParty}
-        client={q.client} title={q.title} items={items} total={quoteTotal(items)} deliveryDays={q.deliveryDays} notes={q.notes} cur={cur.short} />
+        client={q.client} title={q.title} items={items} total={quoteTotal(items)} deliveryDays={q.deliveryDays} notes={q.notes} cur={cur.short(q.currency)} />
       <form action={deleteQuote.bind(null, q.id)} className="mx-auto flex w-full max-w-2xl flex-wrap items-center gap-2 print:hidden">
         <ConfirmButton className="text-sm font-medium text-risk"
           message={q.status === "accepted" ? "تمسح العرض؟ المهمة اللي اتعملت منه هتفضل زي ما هي." : "تمسح العرض ده؟"}>امسح العرض</ConfirmButton>

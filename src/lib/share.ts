@@ -23,7 +23,7 @@ export async function acceptQuoteFor(userId: string, id: string): Promise<{ task
       const claimed = await tx.quote.updateMany({ where: { id, userId, status: "draft" }, data: { status: "accepted" } });
       if (!claimed.count) return;
       const t = await tx.task.create({
-        data: { userId, title: q.title, client: q.client, agreed: quoteTotal(items), due, notes: quoteNotes(quoteNumber(q), items, q.deliveryDays, q.notes) },
+        data: { userId, title: q.title, client: q.client, agreed: quoteTotal(items), currency: q.currency, due, notes: quoteNotes(quoteNumber(q), items, q.deliveryDays, q.notes) },
       });
       await tx.quote.updateMany({ where: { id, userId }, data: { taskId: t.id } });
       fresh = true;

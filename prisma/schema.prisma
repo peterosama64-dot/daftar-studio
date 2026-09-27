@@ -38,6 +38,7 @@ model User {
   bizPhone     String             @default("")
   bizAddress   String             @default("")
   payInfo      String             @default("") // how to pay: InstaPay, wallet, bank account…
+  fxRates      String             @default("{}") // JSON {"USD": 48.5}: 1 unit = this many of the main currency
 }
 
 model Task {
@@ -67,22 +68,25 @@ model Task {
   revisions        Revision[]
   subtasks         Subtask[]
   installments     Installment[]
+  currency         String? // null = the account's main currency
 
   @@index([userId, status])
 }
 
 model Entry {
-  id         String    @id @default(cuid())
-  userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  kind       String // income | subscription | expense
-  name       String
-  client     String    @default("")
-  amount     Float
-  date       DateTime? // income + expense
-  startMonth String? // subscription: "YYYY-MM"
-  endMonth   String? // subscription: last billed month, null = active
-  createdAt  DateTime  @default(now())
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind         String // income | subscription | expense
+  name         String
+  client       String    @default("")
+  amount       Float
+  date         DateTime? // income + expense
+  startMonth   String? // subscription: "YYYY-MM"
+  endMonth     String? // subscription: last billed month, null = active
+  createdAt    DateTime  @default(now())
+  origAmount   Float? // when entered in another currency: the amount as typed (amount itself is always in the main currency)
+  origCurrency String?
 
   @@index([userId, kind])
 }
@@ -132,6 +136,7 @@ model Quote {
   taskId       String?
   shareToken   String?  @unique // public link the client opens (and can accept from)
   createdAt    DateTime @default(now())
+  currency     String? // null = the account's main currency
 
   @@index([userId, createdAt])
 }
