@@ -82,3 +82,18 @@ export async function acceptContract(token: string, f: FormData) {
   }
   revalidatePath(`/s/k/${token}`);
 }
+
+/** After approving, the client rates the work (1–5 stars and an optional word) — once. */
+export async function rateWork(token: string, f: FormData) {
+  if (!isToken(token)) return;
+  const stars = Number(f.get("stars"));
+  if (!Number.isInteger(stars) || stars < 1 || stars > 5) return;
+  const note = String(f.get("note") ?? "").trim().slice(0, 600) || null;
+  const t = await prisma.task.findUnique({ where: { reviewToken: token, user: { suspendedAt: null } }, select: { id: true, userId: true, title: true, client: true, approvedAt: true } });
+  if (!t?.approvedAt) return;
+  const done = await prisma.task.updateMany({ where: { id: t.id, rating: null }, data: { rating: stars, ratingNote: note, ratedAt: new Date() } });
+  if (done.count) {
+    await pushToUser(t.userId, { title: `${t.client || "العميل"} قيّم شغلك ${"★".repeat(stars)}`, body: note ? `«${note.slice(0, 120)}»` : `«${t.title}»`, url: "/app/reviews", tag: `daftar-rating-${t.id}` }).catch(() => {});
+  }
+  revalidatePath(`/s/r/${token}`);
+}

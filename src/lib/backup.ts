@@ -38,6 +38,7 @@ export async function buildBackup(userId: string) {
       ref: t.id, title: t.title, client: t.client, due: t.due, priority: t.priority, status: t.status, source: t.source, notes: t.notes,
       agreed: t.agreed, paid: t.paid, currency: t.currency, doneAt: t.doneAt, timeSpent: t.timeSpent, recurringRef: t.recurringId,
       revisionsAllowed: t.revisionsAllowed, approvedAt: t.approvedAt, createdAt: t.createdAt,
+      rating: t.rating, ratingNote: t.ratingNote, ratedAt: t.ratedAt, showcase: t.showcase,
       contract: t.contract, subtasks: t.subtasks, installments: t.installments.map(({ entryId, ...x }) => ({ ...x, entryRef: entryId })), revisions: t.revisions, deliveries: t.deliveries,
     })),
     entries: entries.map((e) => ({
@@ -78,6 +79,7 @@ export const BackupSchema = z.object({
     agreed: money.nullable().default(null), paid: money.nullable().default(null), currency: cur, doneAt: optDate,
     timeSpent: z.number().int().min(0).max(1e9).default(0), recurringRef: ref, revisionsAllowed: z.number().int().min(0).max(1000).nullable().default(null),
     approvedAt: optDate, createdAt: date,
+    rating: z.number().int().min(1).max(5).nullable().optional().transform((v) => v ?? null), ratingNote: s(600).nullable().optional().transform((v) => v ?? null), ratedAt: optDate, showcase: z.boolean().default(false),
     subtasks: arr(z.object({ title: s(200).min(1), done: z.boolean().default(false), position: z.number().int().default(0) }), 60),
     installments: arr(z.object({ label: s(60), amount: money, due: optDate, paidAt: optDate, entryRef: ref, position: z.number().int().default(0) }), 12),
     revisions: arr(z.object({ note: s(1000).default(""), by: z.enum(["owner", "client"]).default("owner"), createdAt: date }), 50),
@@ -129,6 +131,7 @@ export async function restoreBackup(userId: string, b: Backup) {
         title: t.title, client: t.client, due: t.due, priority: t.priority, status: t.status, source: t.source, notes: t.notes,
         agreed: t.agreed, paid: t.paid, currency: t.currency, doneAt: t.doneAt, timeSpent: t.timeSpent,
         revisionsAllowed: t.revisionsAllowed, approvedAt: t.approvedAt, createdAt: t.createdAt,
+        rating: t.rating, ratingNote: t.ratingNote, ratedAt: t.ratedAt, showcase: t.showcase,
         id: taskIds.get(t.ref)!, userId, recurringId: t.recurringRef ? jobIds.get(t.recurringRef) ?? null : null,
       })),
     });

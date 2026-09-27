@@ -43,6 +43,7 @@ model User {
   budgets      String             @default("{}") // JSON {"print": 500}: monthly spending limit per expense category
   weeklyEmail  Boolean            @default(false) // Friday summary by email
   lastWeekly   String? // "YYYY-MM-DD" of the last weekly email, so a week is never sent twice
+  reviewsToken String?            @unique // public page of chosen client reviews
 }
 
 model Task {
@@ -74,6 +75,10 @@ model Task {
   installments     Installment[]
   currency         String? // null = the account's main currency
   contract         Contract?
+  rating           Int? // 1–5 from the client, after approving the work
+  ratingNote       String?
+  ratedAt          DateTime?
+  showcase         Boolean       @default(false) // the owner chose to show this review on the public reviews page
 
   @@index([userId, status])
 }
