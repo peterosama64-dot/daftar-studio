@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { currencyShort } from "@/lib/data";
+import { currencyShort, loadFx } from "@/lib/data";
 import { fmt } from "@/lib/money";
 import { clientHref } from "@/lib/contact";
 import { hoursLabel, rateReport } from "@/lib/rates";
@@ -12,11 +12,12 @@ export const metadata = { title: "سعر ساعتك" };
 
 export default async function Rates() {
   const uid = await requireUser();
-  const [tasks, cur] = await Promise.all([
-    prisma.task.findMany({ where: { userId: uid, agreed: { gt: 0 } }, select: { id: true, title: true, client: true, agreed: true, timeSpent: true, timerStart: true } }),
+  const [tasks, cur, fx] = await Promise.all([
+    prisma.task.findMany({ where: { userId: uid, agreed: { gt: 0 } }, select: { id: true, title: true, client: true, agreed: true, timeSpent: true, timerStart: true, currency: true } }),
     currencyShort(uid),
+    loadFx(uid),
   ]);
-  const r = rateReport(tasks);
+  const r = rateReport(tasks.map((t) => ({ ...t, agreed: t.agreed === null ? null : fx.toBase(t.agreed, t.currency) })));
   const max = Math.max(...r.clients.map((c) => c.rate), 1);
   const per = `${cur.short}/ساعة`;
   const job = (j: (typeof r.best)[number]) => (

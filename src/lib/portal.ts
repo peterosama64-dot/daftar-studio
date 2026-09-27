@@ -12,7 +12,7 @@ export async function portalFor(token: string) {
   if (!isToken(token)) return null;
   const info = await prisma.clientInfo.findUnique({
     where: { portalToken: token, user: { suspendedAt: null } },
-    select: { userId: true, name: true, user: { select: { ...PARTY_SELECT, currency: true } } },
+    select: { userId: true, name: true, user: { select: { ...PARTY_SELECT, currency: true, fxRates: true } } },
   });
   if (!info) return null;
   return { ...info, cur: CURRENCIES.find((c) => c.code === info.user.currency)?.short ?? "ج.م" };

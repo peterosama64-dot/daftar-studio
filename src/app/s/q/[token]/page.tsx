@@ -1,7 +1,7 @@
 import { PARTY_SELECT } from "@/lib/party";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { CURRENCIES } from "@/lib/constants";
+import { curShort } from "@/lib/fx";
 import { isToken } from "@/lib/share";
 import { quoteNumber, quoteTotal, readItems, validUntil } from "@/lib/quote";
 import { safeFileName } from "@/lib/invoice";
@@ -22,7 +22,7 @@ export default async function SharedQuote({ params }: { params: Promise<{ token:
   const no = quoteNumber(q);
   const until = validUntil(q.createdAt, q.validDays);
   const expired = q.status !== "accepted" && until < new Date(now().getFullYear(), now().getMonth(), now().getDate());
-  const cur = CURRENCIES.find((c) => c.code === q.user.currency)?.short ?? "ج.م";
+  const cur = curShort(q.currency ?? q.user.currency);
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { currencyShort } from "@/lib/data";
+import { currencyShort, loadFx } from "@/lib/data";
 import { fmt } from "@/lib/money";
 import { now, shortDate } from "@/lib/dates";
 import { quoteTotal, readItems } from "@/lib/quote";
@@ -25,21 +25,22 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
 export default async function ClientPage({ params }: { params: Promise<{ name: string }> }) {
   const uid = await requireUser();
   const name = clientName((await params).name);
-  const [tasks, income, quotes, info, files, cur] = await Promise.all([
+  const [tasks, income, quotes, info, files, cur, fx] = await Promise.all([
     prisma.task.findMany({ where: { userId: uid, client: name }, orderBy: [{ status: "asc" }, { createdAt: "desc" }], include: { subtasks: { select: { done: true } } } }),
     prisma.entry.findMany({ where: { userId: uid, kind: "income", client: name }, orderBy: { date: "desc" } }),
     prisma.quote.findMany({ where: { userId: uid, client: name }, orderBy: { createdAt: "desc" } }),
     prisma.clientInfo.findUnique({ where: { userId_name: { userId: uid, name } } }),
     prisma.delivery.findMany({ where: { userId: uid, task: { client: name }, type: { startsWith: "image/" } }, orderBy: { createdAt: "desc" }, take: 6 }),
     currencyShort(uid),
+    loadFx(uid),
   ]);
   if (!tasks.length && !income.length && !quotes.length && !info) notFound();
   const year = now().getFullYear();
   const total = income.reduce((s, e) => s + e.amount, 0);
   const thisYear = income.filter((e) => e.date && e.date.getFullYear() === year).reduce((s, e) => s + e.amount, 0);
-  const owed = tasks.reduce((s, t) => s + (t.agreed ? Math.max(0, t.agreed - (t.paid ?? 0)) : 0), 0);
+  const owed = tasks.reduce((s, t) => s + (t.agreed ? fx.toBase(Math.max(0, t.agreed - (t.paid ?? 0)), t.currency) : 0), 0);
   const open = tasks.filter((t) => t.status !== "done");
-  const rate = rateReport(tasks);
+  const rate = rateReport(tasks.map((t) => ({ ...t, agreed: t.agreed === null ? null : fx.toBase(t.agreed, t.currency) })));
   const wa = info?.phone ? whatsappLink(info.phone) : null;
   const stat = (k: string, v: string, c = "") => (
     <div className="grid gap-0.5 rounded-xl border border-rule bg-sheet px-4 py-3"><span className="text-[13px] text-muted">{k}</span><span className={`num text-xl font-medium ${c}`}>{v}</span></div>
@@ -83,8 +84,8 @@ export default async function ClientPage({ params }: { params: Promise<{ name: s
                     <Link href={`/app/tasks/${t.id}`} className={`min-w-0 flex-1 [overflow-wrap:anywhere] hover:text-cyan ${t.status === "done" ? "text-muted line-through" : "font-medium"}`}>{t.title}</Link>
                     {steps && <Pill mono>{steps}</Pill>}
                     {t.due && t.status !== "done" && <Pill mono>{shortDate(t.due)}</Pill>}
-                    {t.agreed ? <span className="num text-sm text-muted">{fmt(t.agreed)}</span> : null}
-                    {rem > 0 && <Pill tone="waiting">باقي {fmt(rem)}</Pill>}
+                    {t.agreed ? <span className="num text-sm text-muted">{fmt(t.agreed)}{fx.of(t.currency) !== fx.base ? ` ${fx.short(t.currency)}` : ""}</span> : null}
+                    {rem > 0 && <Pill tone="waiting">باقي {fmt(rem)}{fx.of(t.currency) !== fx.base ? ` ${fx.short(t.currency)}` : ""}</Pill>}
                   </li>
                 );
               })}</ul>

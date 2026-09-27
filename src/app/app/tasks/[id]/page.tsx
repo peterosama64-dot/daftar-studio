@@ -2,7 +2,7 @@ import { requireUser } from "@/lib/auth";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { currencyShort } from "@/lib/data";
+import { loadFx } from "@/lib/data";
 import { dayKey } from "@/lib/dates";
 import { fmt } from "@/lib/money";
 import { SOURCE_LABEL, type Source } from "@/lib/constants";
@@ -17,8 +17,9 @@ import { InstallmentsCard } from "@/components/installments-card";
 export default async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const uid = await requireUser();
-  const [t, cur] = await Promise.all([prisma.task.findFirst({ where: { id, userId: uid } }), currencyShort(uid)]);
+  const [t, fx] = await Promise.all([prisma.task.findFirst({ where: { id, userId: uid } }), loadFx(uid)]);
   if (!t) notFound();
+  const cur = { short: fx.short(t.currency) };
   const paidPct = t.agreed ? Math.min(100, ((t.paid ?? 0) / t.agreed) * 100) : 0;
   return (
     <>
@@ -47,9 +48,16 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
               </select>
             </Field>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className={`grid gap-4 ${fx.usable.length > 1 ? "sm:grid-cols-[1fr_1fr_auto]" : "sm:grid-cols-2"}`}>
             <Field label={`المتفق عليه (${cur.short})`}><input name="agreed" inputMode="decimal" defaultValue={t.agreed ?? ""} className={`${inputClass} num text-left`} /></Field>
             <Field label={`اتدفع منه (${cur.short})`}><input name="paid" inputMode="decimal" defaultValue={t.paid ?? ""} className={`${inputClass} num text-left`} /></Field>
+            {fx.usable.length > 1 && (
+              <Field label="العملة">
+                <select name="currency" defaultValue={fx.of(t.currency)} className={inputClass}>
+                  {fx.usable.map((c) => <option key={c} value={c}>{fx.short(c)}</option>)}
+                </select>
+              </Field>
+            )}
           </div>
           {t.agreed ? (
             <div className="grid gap-1.5">
@@ -58,6 +66,9 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
             </div>
           ) : null}
           <Field label="ملاحظات"><textarea name="notes" defaultValue={t.notes} rows={4} className={inputClass} /></Field>
+          {fx.of(t.currency) !== fx.base && t.agreed ? (
+            <p className="text-[13px] text-muted">≈ {fmt(fx.toBase(t.agreed, t.currency))} {fx.short(null)} بسعر النهارده{fx.missing(t.currency) ? " — مفيش سعر صرف متسجّل، حطه من الإعدادات" : ""}. الفلوس اللي بتقبضها بتتسجّل بعملتك الأساسية.</p>
+          ) : null}
           {SOURCE_LABEL[t.source as Source] && <p className="text-[13px] text-muted">جاية {SOURCE_LABEL[t.source as Source]}</p>}
           <div className="flex items-center justify-between gap-3">
             <Button>احفظ</Button>

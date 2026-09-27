@@ -327,8 +327,8 @@ import { reminderText, whatsappMessageLink } from "@/lib/remind";
 import { NO_CLIENT } from "@/lib/owed";
 
 describe("payment reminder", () => {
-  const d = { client: "كافيه نون", sender: "استوديو بيتر", cur: "ج.م", phone: "https://wa.me/201001234567",
-    tasks: [{ title: "لوجو", remaining: 2000, path: "/s/i/abc" }, { title: "منيو", remaining: 1500, path: "/s/i/def" }] };
+  const d = { client: "كافيه نون", sender: "استوديو بيتر", cur: "ج.م", total: 3500, phone: "https://wa.me/201001234567",
+    tasks: [{ title: "لوجو", remaining: 2000, path: "/s/i/abc", cur: "ج.م" }, { title: "منيو", remaining: 1500, path: "/s/i/def", cur: "ج.م" }] };
   it("lists each job with its invoice link and the total", () => {
     const t = reminderText(d, "https://x.app");
     expect(t).toContain("أهلاً يا كافيه نون");
@@ -420,5 +420,32 @@ describe("hourly rate report: worst list", () => {
     const r = rateReport([100, 200, 300, 400, 500, 600, 700].map((x) => t(`j${x}`, x)));
     expect(r.best.map((j) => j.id)).toEqual(["j700", "j600", "j500", "j400", "j300"]);
     expect(r.worst.map((j) => j.id)).toEqual(["j100", "j200"]);
+  });
+});
+
+import { makeFx, parseRates, pickCurrency } from "@/lib/fx";
+
+describe("exchange rates", () => {
+  it("parses only known currencies with positive rates", () => {
+    expect(parseRates('{"USD": 48.5, "SAR": "12.9", "XYZ": 3, "AED": 0}')).toEqual({ USD: 48.5, SAR: 12.9 });
+    expect(parseRates("garbage")).toEqual({});
+  });
+  it("converts into the main currency", () => {
+    const fx = makeFx("EGP", { USD: 48.5 });
+    expect(fx.toBase(100, "USD")).toBe(4850);
+    expect(fx.toBase(100, null)).toBe(100);
+    expect(fx.toBase(100, "EGP")).toBe(100);
+    expect(fx.usable).toEqual(["EGP", "USD"]);
+    expect(fx.missing("SAR")).toBe(true);
+    expect(fx.missing("USD")).toBe(false);
+    expect(fx.short("USD")).toBe("$");
+    expect(fx.short(null)).toBe("ج.م");
+  });
+  it("only accepts usable currencies from forms", () => {
+    const fx = makeFx("EGP", { USD: 48.5 });
+    expect(pickCurrency(fx, "USD")).toBe("USD");
+    expect(pickCurrency(fx, "SAR")).toBeNull();
+    expect(pickCurrency(fx, "EGP")).toBeNull();
+    expect(pickCurrency(fx, "")).toBeNull();
   });
 });

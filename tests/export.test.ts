@@ -28,7 +28,7 @@ describe("excel export", () => {
         { kind: "subscription", name: "Adobe", client: "", amount: 900, date: null, startMonth: "2026-01", endMonth: null },
       ], "ج.م");
     expect(s.map((x) => x.name)).toEqual(["الشغل", "الدخل والمصاريف", "الاشتراكات"]);
-    expect(s[0].rows[1]).toEqual(["لوجو", "سكر", "خلصت", "مستعجل", "2026-09-05", "2026-09-05", 3000, 1000, 2000, "", "2026-09-05"]);
+    expect(s[0].rows[1]).toEqual(["لوجو", "سكر", "خلصت", "مستعجل", "2026-09-05", "2026-09-05", 3000, 1000, 2000, "", "2026-09-05", ""]);
     expect(s[1].rows.slice(1).map((r) => r[3])).toEqual([1000, -200]);
     expect(s[2].rows[1]).toEqual(["Adobe", 900, "2026-01", "", "شغال"]);
   });
