@@ -33,6 +33,7 @@ vi.mock("../src/lib/db", () => {
           ? db.tasks.filter((t) => t.userId === where.userId && (t.agreed ?? 0) > where.agreed.gt).map((t, i) => ({ id: String(i), ...t }))
           : db.tasks.filter((t) => t.userId === where.userId && t.status !== "done" && t.due && t.due < where.due.lt),
       },
+      lead: { findMany: async () => [] },
       installment: {
         findMany: async ({ where }: any) => db.dues.filter((d) => d.userId === where.userId && !d.paidAt && d.due < where.due.lt),
       },
@@ -208,5 +209,18 @@ describe("digest with due payments", () => {
   });
   it("stays quiet with nothing due", () => {
     expect(buildDigest([], today, undefined, [])).toBeNull();
+  });
+});
+
+describe("digest with lead follow-ups", () => {
+  const today = new Date(2026, 8, 23);
+  it("speaks when only follow-ups are due", () => {
+    const d = buildDigest([], today, undefined, [], ["كافيه نون", "سكر"])!;
+    expect(d.title).toBe("عندك 2 عملاء محتاجين متابعة");
+    expect(d.body).toContain("تابع مع: كافيه نون، سكر");
+  });
+  it("adds them to a normal digest", () => {
+    const d = buildDigest([{ title: "لوجو", client: "", due: today, status: "todo" }], today, undefined, [], ["نون"])!;
+    expect(d.body).toContain("تابع مع: نون");
   });
 });

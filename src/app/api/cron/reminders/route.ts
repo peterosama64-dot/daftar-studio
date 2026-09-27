@@ -49,7 +49,11 @@ export async function GET(req: Request) {
       orderBy: { due: "asc" },
       take: 10,
     })).map((d) => ({ label: d.label, amount: d.amount, title: d.task.title, client: d.task.client }));
-    const digest = buildDigest(tasks, today, owed ? { total: owed.total, clients: owed.clients.length, currency } : undefined, dues);
+    const follow = (await prisma.lead.findMany({
+      where: { userId: u.id, status: { in: ["new", "quoted", "waiting"] }, nextAt: { not: null, lt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1) } },
+      select: { name: true }, orderBy: { nextAt: "asc" }, take: 8,
+    })).map((l) => l.name);
+    const digest = buildDigest(tasks, today, owed ? { total: owed.total, clients: owed.clients.length, currency } : undefined, dues, follow);
     if (!digest) { quiet++; continue; }
     if ((await pushToUser(u.id, { title: digest.title, body: digest.body, url: "/app/tasks" })).sent) sent++;
   }

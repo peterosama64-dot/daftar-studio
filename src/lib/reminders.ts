@@ -14,7 +14,7 @@ export type DigestDue = { label: string; title: string; client: string; amount: 
  * The morning reminder: what is overdue, due today and due tomorrow, plus — on Sundays only — how much
  * clients still owe. Null when there is nothing to say, so quiet days send no notification.
  */
-export function buildDigest(tasks: DigestTask[], today: Date, owed?: DigestOwed, dues: DigestDue[] = []): { title: string; body: string; count: number } | null {
+export function buildDigest(tasks: DigestTask[], today: Date, owed?: DigestOwed, dues: DigestDue[] = [], follow: string[] = []): { title: string; body: string; count: number } | null {
   const open = tasks.filter((t) => t.status !== "done" && t.due);
   const overdue = open.filter((t) => daysUntil(t.due, today)! < 0);
   const dueToday = open.filter((t) => daysUntil(t.due, today) === 0);
@@ -24,10 +24,15 @@ export function buildDigest(tasks: DigestTask[], today: Date, owed?: DigestOwed,
     ? `ليك ${fmt(owed.total)} ${owed.currency} عند ${owed.clients === 1 ? "عميل" : `${owed.clients} عملاء`}` : "";
   const duesLine = dues.length
     ? `دفعات مستحقة: ${dues.map((d) => `${d.label} ${d.client ? `${d.title} (${d.client})` : d.title} ${fmt(d.amount)}`).join("، ")}` : "";
-  if (!count && !owedLine && !duesLine) return null;
-  if (!count && !duesLine) return { title: "فلوسك عند العملاء", body: `${owedLine}. افتح «الفلوس» وشوف مين.`, count: 0 };
+  const followLine = follow.length ? `تابع مع: ${follow.join("، ")}` : "";
+  if (!count && !owedLine && !duesLine && !followLine) return null;
+  if (!count && !duesLine && !followLine) return { title: "فلوسك عند العملاء", body: `${owedLine}. افتح «الفلوس» وشوف مين.`, count: 0 };
+  if (!count && !duesLine) {
+    const body = [followLine, owedLine].filter(Boolean).join(" · ");
+    return { title: follow.length === 1 ? "عندك عميل محتاج متابعة" : `عندك ${follow.length} عملاء محتاجين متابعة`, body: body.length > MAX_BODY ? body.slice(0, MAX_BODY - 1).trimEnd() + "…" : body, count: 0 };
+  }
   if (!count) {
-    let body = [duesLine, owedLine].filter(Boolean).join(" · ");
+    let body = [duesLine, followLine, owedLine].filter(Boolean).join(" · ");
     if (body.length > MAX_BODY) body = body.slice(0, MAX_BODY - 1).trimEnd() + "…";
     return { title: dues.length === 1 ? "عندك دفعة مستحقة" : `عندك ${dues.length} دفعات مستحقة`, body, count: 0 };
   }
@@ -37,6 +42,7 @@ export function buildDigest(tasks: DigestTask[], today: Date, owed?: DigestOwed,
   if (dueToday.length) parts.push(`النهارده: ${dueToday.map(label).join("، ")}`);
   if (tomorrow.length) parts.push(`بكرة: ${tomorrow.map(label).join("، ")}`);
   if (duesLine) parts.push(duesLine);
+  if (followLine) parts.push(followLine);
   if (owedLine) parts.push(owedLine);
   let body = parts.join(" · ");
   if (body.length > MAX_BODY) body = body.slice(0, MAX_BODY - 1).trimEnd() + "…";

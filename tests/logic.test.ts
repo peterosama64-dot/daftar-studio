@@ -449,3 +449,18 @@ describe("exchange rates", () => {
     expect(pickCurrency(fx, "")).toBeNull();
   });
 });
+
+import { followUpDue, leadStats } from "@/lib/leads";
+
+describe("leads", () => {
+  const today = new Date(2026, 8, 27, 15);
+  const l = (status: string, nextAt: Date | null, budget: number | null = null, closedAt: Date | null = null) => ({ status, nextAt, budget, createdAt: today, closedAt });
+  it("follow-ups due today or earlier, open only", () => {
+    const list = [l("new", new Date(2026, 8, 27, 9)), l("waiting", new Date(2026, 8, 20)), l("new", new Date(2026, 8, 28)), l("won", new Date(2026, 8, 1)), l("quoted", null)];
+    expect(followUpDue(list, today).length).toBe(2);
+  });
+  it("stats: open value and 90-day win rate", () => {
+    const s = leadStats([l("new", null, 1000), l("quoted", null, 500), l("won", null, 0, new Date(2026, 8, 1)), l("lost", null, 0, new Date(2026, 8, 2)), l("won", null, 0, new Date(2026, 0, 1))], today);
+    expect(s).toEqual({ open: 2, value: 1500, winRate: 50, closed: 2 });
+  });
+});
