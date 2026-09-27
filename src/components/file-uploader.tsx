@@ -6,14 +6,14 @@ import { Button } from "./ui";
 
 const MAX_SEND = 3.8 * 1024 * 1024;
 
-/** Big photos are resized in the browser (long side 2400px, JPEG) so they fit the 4 MB upload limit. */
-async function shrink(f: File): Promise<File> {
+/** Big photos are resized in the browser (long side 2400px by default, JPEG) so they fit the 4 MB upload limit. */
+export async function shrink(f: File, side = 2400): Promise<File> {
   if (!/^image\/(jpeg|png|webp)$/.test(f.type)) return f;
   const img = await createImageBitmap(f).catch(() => null);
   if (!img) return f;
   const big = Math.max(img.width, img.height);
-  if (f.size <= MAX_SEND && big <= 3000) return f;
-  const scale = Math.min(1, 2400 / big);
+  if (f.size <= MAX_SEND && big <= side * 1.25) return f;
+  const scale = Math.min(1, side / big);
   const c = document.createElement("canvas");
   c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
   const ctx = c.getContext("2d")!;
