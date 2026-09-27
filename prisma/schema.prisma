@@ -31,6 +31,7 @@ model User {
   quotes       Quote[]
   recurring    RecurringJob[]
   clientInfos  ClientInfo[]
+  syncedOps    SyncedOp[]
 }
 
 model Task {
@@ -198,4 +199,12 @@ model ClientInfo {
   notes  String @default("")
 
   @@unique([userId, name])
+}
+
+// Items recorded offline carry an id made on the phone; storing it makes a re-sent item a no-op.
+model SyncedOp {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }

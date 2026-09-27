@@ -346,3 +346,22 @@ describe("payment reminder", () => {
     expect(NO_CLIENT).toBe("من غير اسم عميل");
   });
 });
+
+import { parseAmount, readQueue } from "@/lib/offline";
+
+describe("offline queue", () => {
+  it("parses amounts typed on the phone", () => {
+    expect(parseAmount("١٬٥٠٠")).toBe(1500);
+    expect(parseAmount("2,000")).toBe(2000);
+    expect(parseAmount("")).toBeNull();
+    expect(parseAmount("-5")).toBeNull();
+    expect(parseAmount("abc")).toBeNull();
+  });
+  it("reads the stored queue, dropping malformed items", () => {
+    const good = { id: "0123456789abcdef-01", uid: "u1", kind: "expense", title: "طباعة", client: "", amount: 50, date: "2026-09-27" };
+    expect(readQueue(JSON.stringify([good, { id: "x" }, { ...good, kind: "hack" }]))).toEqual([good]);
+    expect(readQueue("not json")).toEqual([]);
+    expect(readQueue(null)).toEqual([]);
+    expect(readQueue('{"a":1}')).toEqual([]);
+  });
+});
