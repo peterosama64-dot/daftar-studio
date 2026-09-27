@@ -72,7 +72,10 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
           {SOURCE_LABEL[t.source as Source] && <p className="text-[0.8125rem] text-muted">جاية {SOURCE_LABEL[t.source as Source]}</p>}
           <div className="flex items-center justify-between gap-3">
             <Button>احفظ</Button>
-            {t.agreed ? <Link href={`/app/tasks/${t.id}/invoice`} className={btnClass("secondary", true)}>اعمل فاتورة</Link> : null}
+            <div className="flex flex-wrap gap-2">
+              <Link href={`/app/tasks/${t.id}/contract`} className={btnClass("ghost", true)}>العقد</Link>
+              {t.agreed ? <Link href={`/app/tasks/${t.id}/invoice`} className={btnClass("secondary", true)}>اعمل فاتورة</Link> : null}
+            </div>
           </div>
         </form>
         <div className="flex flex-wrap items-center justify-between gap-3">

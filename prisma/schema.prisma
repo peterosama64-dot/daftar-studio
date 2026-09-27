@@ -73,6 +73,7 @@ model Task {
   subtasks         Subtask[]
   installments     Installment[]
   currency         String? // null = the account's main currency
+  contract         Contract?
 
   @@index([userId, status])
 }
@@ -277,4 +278,20 @@ model Lead {
   createdAt DateTime  @default(now())
 
   @@index([userId, status])
+}
+
+// A simple work agreement for one task. The owner edits the text; the client accepts it from a link by typing
+// their name. What they accepted is kept word for word (acceptedBody), so later edits can't change it.
+model Contract {
+  id           String    @id @default(cuid())
+  taskId       String    @unique
+  task         Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId       String
+  body         String
+  shareToken   String?   @unique
+  acceptedAt   DateTime?
+  acceptedName String?
+  acceptedBody String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }

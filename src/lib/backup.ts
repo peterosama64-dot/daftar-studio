@@ -22,6 +22,7 @@ export async function buildBackup(userId: string) {
         installments: { select: { label: true, amount: true, due: true, paidAt: true, entryId: true, position: true } },
         revisions: { select: { note: true, by: true, createdAt: true } },
         deliveries: { select: { url: true, name: true, type: true, size: true, round: true, createdAt: true } },
+        contract: { select: { body: true, acceptedAt: true, acceptedName: true, acceptedBody: true } },
       },
     }),
     prisma.entry.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
@@ -37,7 +38,7 @@ export async function buildBackup(userId: string) {
       ref: t.id, title: t.title, client: t.client, due: t.due, priority: t.priority, status: t.status, source: t.source, notes: t.notes,
       agreed: t.agreed, paid: t.paid, currency: t.currency, doneAt: t.doneAt, timeSpent: t.timeSpent, recurringRef: t.recurringId,
       revisionsAllowed: t.revisionsAllowed, approvedAt: t.approvedAt, createdAt: t.createdAt,
-      subtasks: t.subtasks, installments: t.installments.map(({ entryId, ...x }) => ({ ...x, entryRef: entryId })), revisions: t.revisions, deliveries: t.deliveries,
+      contract: t.contract, subtasks: t.subtasks, installments: t.installments.map(({ entryId, ...x }) => ({ ...x, entryRef: entryId })), revisions: t.revisions, deliveries: t.deliveries,
     })),
     entries: entries.map((e) => ({
       ref: e.id, kind: e.kind, name: e.name, client: e.client, amount: e.amount, date: e.date, startMonth: e.startMonth, endMonth: e.endMonth,
@@ -80,6 +81,7 @@ export const BackupSchema = z.object({
     subtasks: arr(z.object({ title: s(200).min(1), done: z.boolean().default(false), position: z.number().int().default(0) }), 60),
     installments: arr(z.object({ label: s(60), amount: money, due: optDate, paidAt: optDate, entryRef: ref, position: z.number().int().default(0) }), 12),
     revisions: arr(z.object({ note: s(1000).default(""), by: z.enum(["owner", "client"]).default("owner"), createdAt: date }), 50),
+    contract: z.object({ body: s(20_000).min(1), acceptedAt: optDate, acceptedName: s(80).nullable().optional().transform((v) => v ?? null), acceptedBody: s(20_000).nullable().optional().transform((v) => v ?? null) }).nullable().optional().transform((v) => v ?? null),
     deliveries: arr(z.object({ url: z.string().max(500).refine((u) => /^https:\/\//.test(u) || u.startsWith("/api/files/local/")), name: s(120), type: s(60), size: z.number().int().min(0), round: z.number().int().min(1).default(1), createdAt: date }), 200),
   }), 20_000),
   entries: arr(z.object({
@@ -135,6 +137,7 @@ export async function restoreBackup(userId: string, b: Backup) {
     await tx.installment.createMany({ data: per((t) => t.installments.map(({ entryRef, ...x }) => ({ ...x, entryId: entryRef ? entryIds.get(entryRef) ?? null : null }))) });
     await tx.revision.createMany({ data: per((t) => t.revisions) });
     await tx.delivery.createMany({ data: per((t) => t.deliveries) });
+    await tx.contract.createMany({ data: b.tasks.filter((t) => t.contract).map((t) => ({ ...t.contract!, taskId: taskIds.get(t.ref)!, userId })) });
     await tx.quote.createMany({ data: b.quotes.map(({ taskRef, ...q }) => ({ ...q, userId, taskId: taskRef ? taskIds.get(taskRef) ?? null : null })) });
     await tx.clientInfo.createMany({ data: clientNames.map((c) => ({ ...c, userId })) });
     await tx.taskTemplate.createMany({ data: b.templates.map((t) => ({ ...t, userId })) });

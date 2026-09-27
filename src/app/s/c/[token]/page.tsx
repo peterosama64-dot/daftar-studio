@@ -20,7 +20,7 @@ export default async function Portal({ params }: { params: Promise<{ token: stri
     prisma.quote.findMany({ where, orderBy: { createdAt: "desc" } }),
     prisma.task.findMany({
       where, orderBy: { createdAt: "desc" },
-      select: { id: true, title: true, status: true, agreed: true, paid: true, currency: true, due: true, reviewToken: true, approvedAt: true, installments: { orderBy: [{ position: "asc" }, { id: "asc" }], select: { label: true, amount: true, due: true, paidAt: true } } },
+      select: { id: true, title: true, status: true, agreed: true, paid: true, currency: true, due: true, reviewToken: true, approvedAt: true, contract: { select: { shareToken: true, acceptedAt: true } }, installments: { orderBy: [{ position: "asc" }, { id: "asc" }], select: { label: true, amount: true, due: true, paidAt: true } } },
     }),
   ]);
   const billed = tasks.filter((t) => t.agreed);
@@ -99,6 +99,19 @@ export default async function Portal({ params }: { params: Promise<{ token: stri
               <Link href={`/s/r/${t.reviewToken}`} className="flex items-center gap-2 py-2.5 hover:text-cyan">
                 <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{t.title}</span>
                 {t.approvedAt ? <Pill tone="money">وافقت عليه</Pill> : <Pill tone="waiting">مستني رأيك</Pill>}
+              </Link>
+            </li>
+          ))}</ul>
+        </Card>
+      )}
+      {tasks.some((t) => t.contract?.shareToken) && (
+        <Card className="p-5">
+          <h2 className="mb-2 text-lg font-bold">العقود</h2>
+          <ul>{tasks.filter((t) => t.contract?.shareToken).map((t) => (
+            <li key={t.id} className="border-b border-rule last:border-b-0">
+              <Link href={`/s/k/${t.contract!.shareToken}`} className="flex items-center gap-2 py-2.5 hover:text-cyan">
+                <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{t.title}</span>
+                {t.contract!.acceptedAt ? <Pill tone="money">وافقت عليه</Pill> : <Pill tone="waiting">مستني موافقتك</Pill>}
               </Link>
             </li>
           ))}</ul>
