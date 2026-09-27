@@ -34,6 +34,7 @@ export default async function Report({ searchParams }: { searchParams: SP }) {
       </div>
       <PageHead title={`تقرير ${monthName(month)}`} base="/app/report" month={month}>
         <Link href={`/app/report/year?y=${month.slice(0, 4)}`} className={`${btnClass("ghost", true)} print:hidden`}>تقرير السنة</Link>
+        <Link href="/app/report/rates" className={`${btnClass("ghost", true)} print:hidden`}>سعر ساعتك</Link>
         <PrintButton file={`تقرير-دفتر-الاستوديو-${month}`} />
       </PageHead>
       <div className="grid items-start gap-5 lg:grid-cols-[1.2fr_1fr] print:grid-cols-1 print:gap-3">

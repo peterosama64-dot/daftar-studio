@@ -385,3 +385,40 @@ describe("installments", () => {
     expect(s.next?.amount).toBe(200);
   });
 });
+
+import { hoursLabel, rateReport } from "@/lib/rates";
+
+describe("hourly rate report", () => {
+  const t = (id: string, client: string, agreed: number | null, hours: number) => ({ id, title: id, client, agreed, timeSpent: Math.round(hours * 3600), timerStart: null });
+  it("averages per client by total money over total hours", () => {
+    const r = rateReport([t("a", "نون", 1000, 2), t("b", "نون", 3000, 2), t("c", "سكر", 600, 6), t("d", "سكر", 500, 0.1), t("e", "", null, 3)]);
+    expect(r.jobs).toBe(3);
+    expect(r.untracked).toBe(1);
+    expect(r.overall).toBeCloseTo(4600 / 10);
+    expect(r.clients.map((c) => [c.name, Math.round(c.rate)])).toEqual([["نون", 1000], ["سكر", 100]]);
+    expect(r.best[0].id).toBe("b");
+    expect(r.worst).toEqual([]);
+  });
+  it("counts a running timer", () => {
+    const at = new Date("2026-09-27T12:00:00Z");
+    const r = rateReport([{ id: "x", title: "x", client: "", agreed: 500, timeSpent: 1800, timerStart: new Date("2026-09-27T11:30:00Z") }], at);
+    expect(r.overall).toBe(500);
+    expect(r.clients[0].name).toBe("من غير اسم عميل");
+  });
+  it("is empty without tracked jobs", () => {
+    expect(rateReport([]).overall).toBeNull();
+  });
+  it("labels hours", () => {
+    expect(hoursLabel(0.5)).toBe("30 د");
+    expect(hoursLabel(3.46)).toBe("3.5 س");
+  });
+});
+
+describe("hourly rate report: worst list", () => {
+  const t = (id: string, rate: number) => ({ id, title: id, client: "c", agreed: rate, timeSpent: 3600, timerStart: null });
+  it("never repeats a job from the best list", () => {
+    const r = rateReport([100, 200, 300, 400, 500, 600, 700].map((x) => t(`j${x}`, x)));
+    expect(r.best.map((j) => j.id)).toEqual(["j700", "j600", "j500", "j400", "j300"]);
+    expect(r.worst.map((j) => j.id)).toEqual(["j100", "j200"]);
+  });
+});
