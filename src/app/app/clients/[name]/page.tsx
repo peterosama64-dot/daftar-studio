@@ -9,7 +9,8 @@ import { now, shortDate } from "@/lib/dates";
 import { quoteTotal, readItems } from "@/lib/quote";
 import { whatsappLink } from "@/lib/contact";
 import { Button, Card, Empty, Field, Pill, btnClass, inputClass } from "@/components/ui";
-import { saveClientInfo } from "../../actions";
+import { saveClientInfo, sharePortal, unsharePortal } from "../../actions";
+import { ShareBox } from "@/components/share-box";
 import { RemindButton } from "@/components/remind-button";
 
 const clientName = (raw: string) => {
@@ -57,7 +58,10 @@ export default async function ClientPage({ params }: { params: Promise<{ name: s
         {stat("لسه عليه", fmt(owed), owed ? "text-wait" : "")}
         {stat("شغل مفتوح", String(open.length))}
       </section>
-      {owed > 0 && <RemindButton client={name} />}
+      <div className="grid gap-2">
+        <ShareBox path={info?.portalToken ? `/s/c/${info.portalToken}` : null} what="كل عروضه وفواتيره وتسليماته" make={sharePortal.bind(null, name)} revoke={unsharePortal.bind(null, name)} label="لينك ملف العميل" />
+        {owed > 0 && <RemindButton client={name} />}
+      </div>
 
       <div className="grid items-start gap-5 lg:grid-cols-[1.3fr_1fr]">
         <div className="grid gap-5">
