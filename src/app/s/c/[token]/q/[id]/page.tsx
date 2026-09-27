@@ -31,7 +31,7 @@ export default async function PortalQuote({ params }: { params: Promise<{ token:
             : <form action={acceptPortalQuote.bind(null, token, q.id)}><Button>موافق على العرض</Button></form>}
         <PrintButton file={safeFileName(`عرض-سعر-${no}`)} />
       </div>
-      <QuoteDoc no={no} created={q.createdAt} validUntil={validUntil(q.createdAt, q.validDays)} from={{ name: p.user.name, email: p.user.email }} client={q.client} title={q.title}
+      <QuoteDoc no={no} created={q.createdAt} validUntil={validUntil(q.createdAt, q.validDays)} from={p.user} client={q.client} title={q.title}
         items={items} total={quoteTotal(items)} deliveryDays={q.deliveryDays} notes={q.notes} cur={p.cur} />
     </>
   );

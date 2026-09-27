@@ -1,3 +1,4 @@
+import { PARTY_SELECT, noParty } from "@/lib/party";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
@@ -18,7 +19,7 @@ export default async function Invoice({ params }: { params: Promise<{ id: string
   const uid = await requireUser();
   const [t, user, cur] = await Promise.all([
     prisma.task.findFirst({ where: { id, userId: uid } }),
-    prisma.user.findUnique({ where: { id: uid }, select: { name: true, email: true } }),
+    prisma.user.findUnique({ where: { id: uid }, select: PARTY_SELECT }),
     currencyShort(uid),
   ]);
   if (!t) notFound();
@@ -47,7 +48,7 @@ export default async function Invoice({ params }: { params: Promise<{ id: string
         </div>
       </div>
       {t.shareToken && <div className="mx-auto w-full max-w-2xl"><ShareBox path={`/s/i/${t.shareToken}`} what="الفاتورة" make={shareInvoice.bind(null, t.id)} revoke={unshareInvoice.bind(null, t.id)} /></div>}
-      <InvoiceDoc no={no} issued={now()} from={{ name: user?.name ?? null, email: user?.email ?? "" }} client={t.client} title={t.title} {...totals} cur={cur.short} />
+      <InvoiceDoc no={no} issued={now()} from={user ?? noParty} client={t.client} title={t.title} {...totals} cur={cur.short} />
     </>
   );
 }

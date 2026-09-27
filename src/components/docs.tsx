@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
 import { fmt } from "@/lib/money";
 import type { QuoteItem } from "@/lib/quote";
+import type { Party } from "@/lib/party";
 import { Brand, Card } from "./ui";
 
 // The invoice and quote as documents, shared by the owner's pages and the public client links.
 
 const longDate = (d: Date) => d.toLocaleDateString("ar-EG-u-nu-latn", { day: "numeric", month: "long", year: "numeric" });
-type Party = { name: string | null; email: string };
+
 
 function Shell({ children }: { children: ReactNode }) {
   return (
@@ -21,11 +22,29 @@ function Parties({ from, to }: { from: Party; to: string }) {
         <span className="text-xs text-muted">من</span>
         <span className="font-display text-lg font-bold">{from.name || from.email}</span>
         {from.name && <span dir="ltr" className="text-right text-sm text-ink2">{from.email}</span>}
+        {from.bizPhone && <span dir="ltr" className="text-right text-sm text-ink2">{from.bizPhone}</span>}
+        {from.bizAddress && <span className="whitespace-pre-line text-sm text-ink2">{from.bizAddress}</span>}
       </div>
       <div className="grid gap-1">
         <span className="text-xs text-muted">إلى</span>
         <span className="font-display text-lg font-bold">{to || "—"}</span>
       </div>
+    </section>
+  );
+}
+
+/* eslint-disable @next/next/no-img-element -- the owner's logo comes from Blob storage */
+function Logo({ from }: { from: Party }) {
+  return from.logoUrl ? <img src={from.logoUrl} alt={from.name || "اللوجو"} className="max-h-16 max-w-40 object-contain" /> : null;
+}
+
+/** How to pay, as the owner wrote it (InstaPay, wallet, bank…). */
+function PayInfo({ from }: { from: Party }) {
+  if (!from.payInfo) return null;
+  return (
+    <section className="rounded-xl border border-rule bg-paper p-4 text-sm print:bg-white">
+      <p className="mb-1 font-semibold">طرق الدفع</p>
+      <p className="whitespace-pre-line text-ink2 [overflow-wrap:anywhere]">{from.payInfo}</p>
     </section>
   );
 }
@@ -50,7 +69,7 @@ export function InvoiceDoc({ no, issued, from, client, title, total, paid, remai
   return (
     <Shell>
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-rule pb-5">
-        <div className="grid gap-1"><h1 className="text-3xl font-extrabold">فاتورة</h1><p className="num text-sm text-muted">{no}</p></div>
+        <div className="grid gap-2"><Logo from={from} /><h1 className="text-3xl font-extrabold">فاتورة</h1><p className="num text-sm text-muted">{no}</p></div>
         <div className="grid gap-1 text-sm sm:text-left"><span className="text-muted">تاريخ الإصدار</span><span className="font-semibold">{longDate(issued)}</span></div>
       </header>
       <Parties from={from} to={client} />
@@ -65,7 +84,7 @@ export function InvoiceDoc({ no, issued, from, client, title, total, paid, remai
       <div className="grid w-full gap-0.5 text-[15px] sm:mr-auto sm:max-w-xs print:mr-auto print:max-w-xs">
         {row("الإجمالي", total)}{row("المدفوع", paid)}{row("المتبقي المستحق", remaining, true)}
       </div>
-      {remaining === 0 && <p className="text-center font-semibold text-money">تم سداد الفاتورة بالكامل. شكرًا لكم.</p>}
+      {remaining === 0 ? <p className="text-center font-semibold text-money">تم سداد الفاتورة بالكامل. شكرًا لكم.</p> : <PayInfo from={from} />}
       <Footer line="شكرًا لتعاملكم معنا." />
     </Shell>
   );
@@ -78,7 +97,7 @@ export function QuoteDoc({ no, created, validUntil, from, client, title, items, 
   return (
     <Shell>
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-rule pb-5">
-        <div className="grid gap-1"><h1 className="text-3xl font-extrabold">عرض سعر</h1><p className="num text-sm text-muted">{no}</p></div>
+        <div className="grid gap-2"><Logo from={from} /><h1 className="text-3xl font-extrabold">عرض سعر</h1><p className="num text-sm text-muted">{no}</p></div>
         <div className="grid gap-1 text-sm sm:text-left">
           <span className="text-muted">التاريخ</span><span className="font-semibold">{longDate(created)}</span>
           <span className="mt-1 text-muted">ساري حتى</span><span className="font-semibold">{longDate(validUntil)}</span>
@@ -113,6 +132,7 @@ export function QuoteDoc({ no, created, validUntil, from, client, title, items, 
           {notes && <p className="whitespace-pre-wrap"><span className="text-muted">الشروط: </span>{notes}</p>}
         </section>
       )}
+      <PayInfo from={from} />
       <Footer line="يسعدنا تعاونكم، ونتطلع للعمل معكم." />
     </Shell>
   );

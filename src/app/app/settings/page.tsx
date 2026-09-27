@@ -8,13 +8,14 @@ import { logout } from "@/app/(auth)/actions";
 import { aiEnabled, aiName } from "@/lib/ai";
 import { isAdmin } from "@/lib/admin";
 import { NotifyCard } from "@/components/notify-card";
+import { LogoUpload } from "@/components/logo-upload";
 import { setCurrency, setName, deleteEverything } from "../actions";
 
 export const metadata = { title: "الإعدادات" };
 
 export default async function Settings() {
   const uid = await requireUser();
-  const [cur, user, admin, gmail] = await Promise.all([getCurrency(uid), prisma.user.findUnique({ where: { id: uid }, select: { email: true, name: true } }), isAdmin(uid), prisma.gmailAccount.findUnique({ where: { userId: uid }, select: { id: true } })]);
+  const [cur, user, admin, gmail] = await Promise.all([getCurrency(uid), prisma.user.findUnique({ where: { id: uid }, select: { email: true, name: true, logoUrl: true, bizPhone: true, bizAddress: true, payInfo: true } }), isAdmin(uid), prisma.gmailAccount.findUnique({ where: { userId: uid }, select: { id: true } })]);
   const row = (name: string, desc: string, right: React.ReactNode) => (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule py-4 last:border-b-0">
       <div className="min-w-0"><div className="font-display font-semibold">{name}</div><p className="text-sm text-muted">{desc}</p></div>
@@ -35,14 +36,19 @@ export default async function Settings() {
             </div>
           </div>
         </Card>
-        <Card className="p-5">
-          <h2 className="mb-2 text-lg font-bold">اسمك على الفواتير</h2>
-          <form action={setName} className="flex flex-wrap items-end gap-2">
-            <Field label="اسمك أو اسم الاستوديو">
-              <input name="name" defaultValue={user?.name ?? ""} maxLength={80} className={inputClass} />
-            </Field>
-            <Button small>احفظ</Button>
-          </form>
+        <Card className="p-5 lg:row-span-2">
+          <h2 className="mb-1 text-lg font-bold">بياناتك على الفواتير</h2>
+          <p className="mb-3 text-sm text-muted">بتظهر على الفواتير وعروض الأسعار ولينكات العملاء.</p>
+          <div className="grid gap-4">
+            <LogoUpload url={user?.logoUrl ?? null} />
+            <form action={setName} className="grid gap-3">
+              <Field label="اسمك أو اسم الاستوديو"><input name="name" defaultValue={user?.name ?? ""} maxLength={80} className={inputClass} /></Field>
+              <Field label="رقم التليفون"><input name="bizPhone" dir="ltr" defaultValue={user?.bizPhone ?? ""} maxLength={40} placeholder="01xxxxxxxxx" className={`${inputClass} text-left`} /></Field>
+              <Field label="العنوان"><input name="bizAddress" defaultValue={user?.bizAddress ?? ""} maxLength={200} placeholder="القاهرة، مصر الجديدة" className={inputClass} /></Field>
+              <Field label="طرق الدفع"><textarea name="payInfo" rows={3} defaultValue={user?.payInfo ?? ""} maxLength={600} placeholder={"InstaPay: name@instapay\nفودافون كاش: 010xxxxxxxx\nحساب بنكي: …"} className={inputClass} /></Field>
+              <Button small className="justify-self-start">احفظ</Button>
+            </form>
+          </div>
         </Card>
         <Card className="p-5">
           <h2 className="mb-2 text-lg font-bold">العملة</h2>

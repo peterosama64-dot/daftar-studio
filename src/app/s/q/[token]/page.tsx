@@ -1,3 +1,4 @@
+import { PARTY_SELECT } from "@/lib/party";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { CURRENCIES } from "@/lib/constants";
@@ -15,7 +16,7 @@ export const metadata = { title: "عرض سعر" };
 export default async function SharedQuote({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   if (!isToken(token)) notFound();
-  const q = await prisma.quote.findUnique({ where: { shareToken: token, user: { suspendedAt: null } }, include: { user: { select: { name: true, email: true, currency: true } } } });
+  const q = await prisma.quote.findUnique({ where: { shareToken: token, user: { suspendedAt: null } }, include: { user: { select: { ...PARTY_SELECT, currency: true } } } });
   if (!q) notFound();
   const items = readItems(q.items);
   const no = quoteNumber(q);
@@ -32,7 +33,7 @@ export default async function SharedQuote({ params }: { params: Promise<{ token:
             : <form action={acceptSharedQuote.bind(null, token)}><Button>موافق على العرض</Button></form>}
         <PrintButton file={safeFileName(`عرض-سعر-${no}`)} />
       </div>
-      <QuoteDoc no={no} created={q.createdAt} validUntil={until} from={{ name: q.user.name, email: q.user.email }} client={q.client} title={q.title}
+      <QuoteDoc no={no} created={q.createdAt} validUntil={until} from={q.user} client={q.client} title={q.title}
         items={items} total={quoteTotal(items)} deliveryDays={q.deliveryDays} notes={q.notes} cur={cur} />
     </>
   );

@@ -1,3 +1,4 @@
+import { PARTY_SELECT, noParty } from "@/lib/party";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
@@ -19,7 +20,7 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
   const uid = await requireUser();
   const [q, user, cur] = await Promise.all([
     prisma.quote.findFirst({ where: { id, userId: uid } }),
-    prisma.user.findUnique({ where: { id: uid }, select: { name: true, email: true } }),
+    prisma.user.findUnique({ where: { id: uid }, select: PARTY_SELECT }),
     currencyShort(uid),
   ]);
   if (!q) notFound();
@@ -44,7 +45,7 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
           {q.status !== "accepted" && <p className="mt-1.5 text-[13px] text-muted print:hidden">العميل يقدر يوافق من اللينك، وساعتها المهمة بتتعمل لوحدها ويوصلك تنبيه.</p>}
         </div>
       )}
-      <QuoteDoc no={no} created={q.createdAt} validUntil={validUntil(q.createdAt, q.validDays)} from={{ name: user?.name ?? null, email: user?.email ?? "" }}
+      <QuoteDoc no={no} created={q.createdAt} validUntil={validUntil(q.createdAt, q.validDays)} from={user ?? noParty}
         client={q.client} title={q.title} items={items} total={quoteTotal(items)} deliveryDays={q.deliveryDays} notes={q.notes} cur={cur.short} />
       <form action={deleteQuote.bind(null, q.id)} className="mx-auto flex w-full max-w-2xl flex-wrap items-center gap-2 print:hidden">
         <ConfirmButton className="text-sm font-medium text-risk"

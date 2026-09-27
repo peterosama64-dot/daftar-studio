@@ -22,7 +22,7 @@ export default async function PortalInvoice({ params }: { params: Promise<{ toke
         <Link href={`/s/c/${token}`} className="text-sm text-cyan">› كل الملف</Link>
         <PrintButton file={safeFileName(`فاتورة-${no}`)} />
       </div>
-      <InvoiceDoc no={no} issued={now()} from={{ name: p.user.name, email: p.user.email }} client={t.client} title={t.title} {...invoiceTotals(t.agreed, t.paid)} cur={p.cur} />
+      <InvoiceDoc no={no} issued={now()} from={p.user} client={t.client} title={t.title} {...invoiceTotals(t.agreed, t.paid)} cur={p.cur} />
     </>
   );
 }
