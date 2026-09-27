@@ -39,6 +39,7 @@ model User {
   bizAddress   String             @default("")
   payInfo      String             @default("") // how to pay: InstaPay, wallet, bank account…
   fxRates      String             @default("{}") // JSON {"USD": 48.5}: 1 unit = this many of the main currency
+  leads        Lead[]
 }
 
 model Task {
@@ -252,4 +253,24 @@ model TaskTemplate {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// Someone who asked about work but hasn't agreed yet: followed from first message to won or lost.
+model Lead {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  contact   String    @default("") // phone or email
+  need      String    @default("") // what they asked for
+  budget    Float?
+  source    String    @default("") // Instagram, Behance, a friend…
+  status    String    @default("new") // new | quoted | waiting | won | lost
+  nextAt    DateTime? // when to follow up
+  notes     String    @default("")
+  taskId    String? // the task made when won
+  closedAt  DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, status])
 }

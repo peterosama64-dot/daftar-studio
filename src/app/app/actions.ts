@@ -17,6 +17,7 @@ import { removeFile } from "@/lib/files";
 import { whatsappLink } from "@/lib/contact";
 import { loadFx } from "@/lib/data";
 import { pickCurrency, type Fx } from "@/lib/fx";
+import { LEAD_STATUSES } from "@/lib/leads";
 import type { ReminderData } from "@/lib/remind";
 
 const done = () => revalidatePath("/app", "layout");
@@ -621,4 +622,86 @@ export async function startFromTemplate(id: string, f: FormData) {
   });
   done();
   redirect(`/app/tasks/${task.id}`);
+}
+
+// ---------- leads ----------
+const leadPath = () => revalidatePath("/app/leads");
+
+export async function addLead(f: FormData) {
+  const userId = await requireUser();
+  const name = str(f, "name", 80);
+  if (!name) return;
+  await prisma.lead.create({
+    data: {
+      userId, name, contact: str(f, "contact", 120), need: str(f, "need", 500), budget: num(f, "budget"),
+      source: str(f, "source", 60), nextAt: parseDay(str(f, "nextAt", 10)),
+    },
+  });
+  leadPath();
+}
+
+/** Move a lead to another stage. Won/lost close it; reopening clears the close date. */
+export async function setLeadStatus(id: string, status: string) {
+  const userId = await requireUser();
+  if (!LEAD_STATUSES.includes(status) || status === "won") return;
+  const closing = status === "lost";
+  await prisma.lead.updateMany({ where: { id, userId }, data: { status, closedAt: closing ? now() : null, ...(closing ? { nextAt: null } : {}) } });
+  leadPath();
+}
+
+export async function updateLead(id: string, f: FormData) {
+  const userId = await requireUser();
+  const name = str(f, "name", 80);
+  if (!name) return;
+  await prisma.lead.updateMany({
+    where: { id, userId },
+    data: { name, contact: str(f, "contact", 120), need: str(f, "need", 500), budget: num(f, "budget"), source: str(f, "source", 60), nextAt: parseDay(str(f, "nextAt", 10)), notes: str(f, "notes", 2000) },
+  });
+  leadPath();
+}
+
+/** Push the follow-up by some days (from today). */
+export async function snoozeLead(id: string, days: number) {
+  const userId = await requireUser();
+  const d = Math.min(60, Math.max(1, Math.round(days)));
+  const t = now();
+  await prisma.lead.updateMany({ where: { id, userId }, data: { nextAt: new Date(t.getFullYear(), t.getMonth(), t.getDate() + d) } });
+  leadPath();
+}
+
+export async function deleteLead(id: string) {
+  const userId = await requireUser();
+  await prisma.lead.deleteMany({ where: { id, userId } });
+  leadPath();
+}
+
+/**
+ * «اتفقنا»: the lead becomes a task (their request, their budget as the price) and a client with their
+ * contact saved. Once only: a second tap opens the same task.
+ */
+export async function winLead(id: string) {
+  const userId = await requireUser();
+  const lead = await prisma.lead.findFirst({ where: { id, userId } });
+  if (!lead) return;
+  let taskId = lead.taskId;
+  if (!taskId) {
+    taskId = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.lead.updateMany({ where: { id, userId, taskId: null }, data: { status: "won", closedAt: now(), nextAt: null } });
+      if (!claimed.count) return null;
+      const t = await tx.task.create({ data: { userId, title: (lead.need || `شغل ${lead.name}`).slice(0, 200), client: lead.name, agreed: lead.budget, notes: lead.notes, source: "manual" } });
+      await tx.lead.updateMany({ where: { id, userId }, data: { taskId: t.id } });
+      if (lead.contact) {
+        const isEmail = lead.contact.includes("@");
+        await tx.clientInfo.upsert({
+          where: { userId_name: { userId, name: lead.name } },
+          create: { userId, name: lead.name, ...(isEmail ? { email: lead.contact } : { phone: lead.contact }) },
+          update: {},
+        });
+      }
+      return t.id;
+    });
+    taskId ??= (await prisma.lead.findFirst({ where: { id, userId }, select: { taskId: true } }))?.taskId ?? null;
+  }
+  done();
+  if (taskId) redirect(`/app/tasks/${taskId}`);
 }
