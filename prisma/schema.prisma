@@ -25,6 +25,7 @@ model User {
   push         PushSubscription[]
   lastDigest   String? // "YYYY-MM-DD" of the last morning reminder, so the daily job never sends twice
   lastMonthly  String? // "YYYY-MM" of the last month-summary notification
+  dayHours     Int                @default(6) // hours of work a day the week plan fills up to
   incomeGoal   Float? // monthly income target, shown on the home page
   suspendedAt  DateTime? // set by an admin: can't sign in, no reminders, shared links stop working
   lastSeenAt   DateTime? // updated at most hourly, for the admin's activity numbers
@@ -80,6 +81,8 @@ model Task {
   ratingNote       String?
   ratedAt          DateTime?
   showcase         Boolean       @default(false) // the owner chose to show this review on the public reviews page
+  planDay          DateTime? // the day of the week plan this job is placed on (local midnight)
+  estimate         Int? // estimated minutes of work, for the week plan
 
   @@index([userId, status])
 }
