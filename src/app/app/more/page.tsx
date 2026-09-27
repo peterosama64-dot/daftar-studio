@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/app/inbox", title: "الرسايل", desc: "طلّع الشغل من شات العملاء" },
   { href: "/app/report", title: "تقرير الشهر", desc: "خلصت إيه، ولسه إيه، وصافي ربحك" },
   { href: "/app/clients", title: "العملاء", desc: "مين شغال معاك ومين لسه عليه فلوس" },
+  { href: "/app/reviews", title: "آراء العملاء", desc: "تقييمات العملاء لشغلك، وصفحة تعرض أحلاها" },
   { href: "/app/settings", title: "الإعدادات", desc: "العملة والربط والخصوصية" },
 ];
 

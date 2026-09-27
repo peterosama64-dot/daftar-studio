@@ -16,9 +16,10 @@ const ITEMS = [
   { href: "/app/inbox", label: "الرسايل" },
   { href: "/app/report", label: "التقرير" },
   { href: "/app/clients", label: "العملاء" },
+  { href: "/app/reviews", label: "آراء العملاء" },
   { href: "/app/settings", label: "الإعدادات" },
 ];
-const MORE = ["/app/search", "/app/calendar", "/app/recurring", "/app/leads", "/app/quotes", "/app/templates", "/app/inbox", "/app/report", "/app/clients", "/app/settings", "/app/more"];
+const MORE = ["/app/search", "/app/calendar", "/app/recurring", "/app/leads", "/app/quotes", "/app/templates", "/app/inbox", "/app/report", "/app/clients", "/app/reviews", "/app/settings", "/app/more"];
 
 const isActive = (path: string, href: string) => (href === "/app" ? path === "/app" : path.startsWith(href));
 
@@ -31,7 +32,7 @@ export function Sidebar() {
   const sp = useSearchParams();
   const m = sp.get("m");
   return (
-    <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-8 border-l border-rule bg-sheet px-4 py-7 lg:flex print:hidden">
+    <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-8 overflow-y-auto border-l border-rule bg-sheet px-4 py-7 lg:flex print:hidden">
       <Brand href="/app" />
       <form action="/app/search" role="search">
         <input name="q" type="search" placeholder="بحث…" aria-label="بحث" defaultValue={path.startsWith("/app/search") ? (sp.get("q") ?? "") : ""}

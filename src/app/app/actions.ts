@@ -805,3 +805,23 @@ export async function deleteContract(taskId: string) {
   await prisma.contract.deleteMany({ where: { taskId, userId } });
   contractPath(taskId);
 }
+
+// ---------- client reviews ----------
+/** Show or hide one review on the public reviews page. */
+export async function setShowcase(taskId: string, on: boolean) {
+  const userId = await requireUser();
+  await prisma.task.updateMany({ where: { id: taskId, userId, rating: { not: null } }, data: { showcase: on } });
+  revalidatePath("/app/reviews");
+}
+
+export async function shareReviews() {
+  const userId = await requireUser();
+  await prisma.user.updateMany({ where: { id: userId, reviewsToken: null }, data: { reviewsToken: newToken() } });
+  revalidatePath("/app/reviews");
+}
+
+export async function unshareReviews() {
+  const userId = await requireUser();
+  await prisma.user.updateMany({ where: { id: userId }, data: { reviewsToken: null } });
+  revalidatePath("/app/reviews");
+}

@@ -4,7 +4,9 @@ import { isToken } from "@/lib/share";
 import { revisionState } from "@/lib/revisions";
 import { DeliveryFiles } from "@/components/delivery-files";
 import { Button, Card, inputClass } from "@/components/ui";
-import { approveWork, requestRevision } from "../../actions";
+import { approveWork, rateWork, requestRevision } from "../../actions";
+import { RateForm } from "@/components/rate-form";
+import { Stars } from "@/components/stars";
 
 export const metadata = { title: "مراجعة الشغل" };
 
@@ -30,7 +32,14 @@ export default async function Review({ params }: { params: Promise<{ token: stri
       </Card>
 
       {t.approvedAt ? (
-        <Card className="p-5 text-center font-semibold text-money">تمت الموافقة على الشغل. شكرًا لكم.</Card>
+        <>
+          <Card className="p-5 text-center font-semibold text-money">تمت الموافقة على الشغل. شكرًا لكم.</Card>
+          <Card className="p-5">
+            {t.rating ? (
+              <div className="grid gap-1 text-center"><Stars n={t.rating} className="text-2xl" /><p className="text-sm text-muted">شكرًا على تقييمك!</p></div>
+            ) : <RateForm action={rateWork.bind(null, token)} />}
+          </Card>
+        </>
       ) : t.deliveries.length > 0 && (
         <Card className="grid gap-4 p-5">
           <form action={approveWork.bind(null, token)}><Button className="w-full sm:w-auto">موافق على الشغل</Button></form>
