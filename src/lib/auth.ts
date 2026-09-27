@@ -2,7 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
-import { prisma } from "./db";
+import { prisma, userRow } from "./db";
 import { SESSION_COOKIE, SESSION_DAYS, signSession, verifySession } from "./session";
 
 export const hashPassword = (pw: string) => bcrypt.hash(pw, 12);
@@ -31,7 +31,7 @@ const SEEN_EVERY = 60 * 60 * 1000;
 export async function currentUserId(): Promise<string | null> {
   const uid = await verifySession((await cookies()).get(SESSION_COOKIE)?.value);
   if (!uid) return null;
-  const u = await prisma.user.findUnique({ where: { id: uid }, select: { id: true, suspendedAt: true, lastSeenAt: true } });
+  const u = await userRow(uid);
   if (!u || u.suspendedAt) return null;
   const t = Date.now();
   if (!u.lastSeenAt || t - u.lastSeenAt.getTime() > SEEN_EVERY) {

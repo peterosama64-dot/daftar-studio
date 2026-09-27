@@ -6,7 +6,7 @@ import { HomeInsights } from "@/components/home-insights";
 import Link from "next/link";
 import { stopTimer } from "./actions";
 import { Button } from "@/components/ui";
-import { prisma } from "@/lib/db";
+import { userRow } from "@/lib/db";
 import { TaskCard } from "@/components/task-card";
 import { PageHead } from "@/components/month";
 import { Empty, Pill, SectionHead } from "@/components/ui";
@@ -19,7 +19,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const month = await monthFrom(searchParams);
   const [{ today, urgent, tasks, entries, totals, cur }, user] = await Promise.all([
     loadMonth(month, uid),
-    prisma.user.findUnique({ where: { id: uid }, select: { incomeGoal: true } }),
+    userRow(uid),
   ]);
   const running = tasks.find((t) => t.timerStart);
   const h = today.getHours();

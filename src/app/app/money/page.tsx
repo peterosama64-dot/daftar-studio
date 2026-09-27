@@ -3,7 +3,7 @@ import { MoneyStrip } from "@/components/money-strip";
 import { PageHead } from "@/components/month";
 import Link from "next/link";
 import { Button, Card, Empty, btnClass, inputClass } from "@/components/ui";
-import { prisma } from "@/lib/db";
+import { prisma, userRow } from "@/lib/db";
 import { NO_CLIENT, owedByClient } from "@/lib/owed";
 import { loadFx } from "@/lib/data";
 import { CATEGORIES, parseBudgets, spendByCategory } from "@/lib/categories";
@@ -25,7 +25,7 @@ export default async function Money({ searchParams }: { searchParams: SP }) {
     loadMonth(month, uid),
     loadFx(uid),
     prisma.task.findMany({ where: { userId: uid, agreed: { gt: 0 } }, select: { id: true, title: true, client: true, agreed: true, paid: true, currency: true } }),
-    prisma.user.findUnique({ where: { id: uid }, select: { budgets: true } }),
+    userRow(uid),
   ]);
   const budgets = parseBudgets(budgetRow?.budgets);
   const spend = spendByCategory(entries, month, budgets);

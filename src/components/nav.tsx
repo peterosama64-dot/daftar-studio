@@ -49,6 +49,7 @@ export function Sidebar() {
           );
         })}
       </nav>
+      <p className="mt-auto text-xs text-muted">اختصارات الكيبورد: دوس <kbd className="rounded border border-rule bg-paper px-1.5 font-mono">?</kbd></p>
     </aside>
   );
 }

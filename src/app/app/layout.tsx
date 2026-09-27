@@ -6,6 +6,7 @@ import { Sidebar, TabBar } from "@/components/nav";
 import Link from "next/link";
 import { Brand } from "@/components/ui";
 import { OfflineKit } from "@/components/offline-kit";
+import { Shortcuts } from "@/components/shortcuts";
 import { requireUser } from "@/lib/auth";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -15,6 +16,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Suspense><Sidebar /></Suspense>
       <div className="min-w-0 flex-1">
         <OfflineKit uid={uid} />
+        <Shortcuts />
         <div className="flex items-center justify-between px-4 pt-4 lg:hidden print:hidden">
           <Brand href="/app" />
           <Link href="/app/search" aria-label="بحث" className="grid size-10 place-items-center rounded-xl border border-rule bg-sheet text-muted hover:text-ink">
