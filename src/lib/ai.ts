@@ -6,6 +6,7 @@ import { dayKey, AR_DAYS, now } from "./dates";
 import { ParsedSchema, type Parsed } from "./parsed";
 import { heuristicParse } from "./heuristic";
 import { CATEGORY_KEYS } from "./categories";
+import { AskSchema, askSystem, type AskSpec } from "./ask";
 
 const CLAUDE_MODEL = "claude-opus-5";
 // "latest" aliases so a retired Gemini version never breaks the app; override the first with GEMINI_MODEL.
@@ -27,7 +28,8 @@ export const aiEnabled = () => aiProvider() !== null;
 export const aiName = () => (aiProvider() === "gemini" ? "Gemini" : "Claude");
 
 const claude = () => new Anthropic();
-const gemini = () => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, httpOptions: { timeout: 20_000 } });
+// GEMINI_BASE_URL only points tests at a local stand-in.
+const gemini = () => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, httpOptions: { timeout: 20_000, ...(process.env.GEMINI_BASE_URL ? { baseUrl: process.env.GEMINI_BASE_URL } : {}) } });
 
 /** Call Gemini, retrying a busy model once and then moving to the next one. Throws the last error. */
 type GeminiArgs = Parameters<GoogleGenAI["models"]["generateContent"]>[0];
@@ -181,6 +183,38 @@ export async function readReceipt(image: Uint8Array, mime: string, currency: str
       return parsed.success ? ok(parsed.data) : null;
     } catch (e) {
       console.error("readReceipt: Gemini error", e instanceof GeminiApiError ? e.status : "", e instanceof Error ? e.message : e);
+      return null;
+    }
+  }
+  return null;
+}
+
+/** «اسأل دفترك»: the question as a structured query (never the answer itself). Null when no AI is set up or it fails. */
+export async function askToQuery(question: string, today: Date, clients: string[], currency: string): Promise<AskSpec | null> {
+  const system = askSystem(today, clients, currency);
+  const provider = aiProvider();
+  if (provider === "claude") {
+    try {
+      const res = await claude().messages.parse({
+        model: CLAUDE_MODEL,
+        max_tokens: 1000,
+        output_config: { effort: "low", format: zodOutputFormat(AskSchema) },
+        system,
+        messages: [{ role: "user", content: question }],
+      });
+      return res.parsed_output ?? null;
+    } catch (e) {
+      if (e instanceof Anthropic.APIError) { console.error("askToQuery: Claude API error", e.status, e.message); return null; }
+      throw e;
+    }
+  }
+  if (provider === "gemini") {
+    try {
+      const res = await geminiGenerate(question, { systemInstruction: system, responseMimeType: "application/json", responseJsonSchema: z.toJSONSchema(AskSchema) });
+      const parsed = AskSchema.safeParse(JSON.parse(res.text ?? ""));
+      return parsed.success ? parsed.data : null;
+    } catch (e) {
+      console.error("askToQuery: Gemini error", e instanceof GeminiApiError ? e.status : "", e instanceof Error ? e.message : e);
       return null;
     }
   }

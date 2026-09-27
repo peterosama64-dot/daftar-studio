@@ -3,6 +3,7 @@ import { PageHead } from "@/components/month";
 import { Card } from "@/components/ui";
 
 const LINKS = [
+  { href: "/app/ask", title: "اسأل دفترك", desc: "اسأل بالعامية: كام دخلت من عميل، صرفت كام، مين عليه فلوس" },
   { href: "/app/calendar", title: "التقويم", desc: "كل مواعيد التسليم في الشهر" },
   { href: "/app/meetings", title: "المواعيد", desc: "مكالمات واجتماعات بالساعة، وتنبيه قبلها بساعة" },
   { href: "/app/recurring", title: "شغل شهري", desc: "عملاء على باقة شهرية: المهمة بتتعمل لوحدها كل شهر" },
