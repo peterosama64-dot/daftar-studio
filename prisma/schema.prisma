@@ -13,39 +13,40 @@ datasource db {
 }
 
 model User {
-  id           String             @id @default(cuid())
-  email        String             @unique
-  name         String             @default("")
-  passwordHash String
-  currency     String             @default("EGP")
-  createdAt    DateTime           @default(now())
-  tasks        Task[]
-  entries      Entry[]
-  gmail        GmailAccount?
-  push         PushSubscription[]
-  lastDigest   String? // "YYYY-MM-DD" of the last morning reminder, so the daily job never sends twice
-  lastMonthly  String? // "YYYY-MM" of the last month-summary notification
-  dayHours     Int                @default(6) // hours of work a day the week plan fills up to
-  incomeGoal   Float? // monthly income target, shown on the home page
-  suspendedAt  DateTime? // set by an admin: can't sign in, no reminders, shared links stop working
-  lastSeenAt   DateTime? // updated at most hourly, for the admin's activity numbers
-  quotes       Quote[]
-  recurring    RecurringJob[]
-  clientInfos  ClientInfo[]
-  syncedOps    SyncedOp[]
-  templates    TaskTemplate[]
+  id            String             @id @default(cuid())
+  email         String             @unique
+  name          String             @default("")
+  passwordHash  String
+  currency      String             @default("EGP")
+  createdAt     DateTime           @default(now())
+  tasks         Task[]
+  entries       Entry[]
+  gmail         GmailAccount?
+  push          PushSubscription[]
+  lastDigest    String? // "YYYY-MM-DD" of the last morning reminder, so the daily job never sends twice
+  lastMonthly   String? // "YYYY-MM" of the last month-summary notification
+  dayHours      Int                @default(6) // hours of work a day the week plan fills up to
+  calendarToken String?            @unique // private iCal feed link (Google / Apple Calendar subscribe to it)
+  incomeGoal    Float? // monthly income target, shown on the home page
+  suspendedAt   DateTime? // set by an admin: can't sign in, no reminders, shared links stop working
+  lastSeenAt    DateTime? // updated at most hourly, for the admin's activity numbers
+  quotes        Quote[]
+  recurring     RecurringJob[]
+  clientInfos   ClientInfo[]
+  syncedOps     SyncedOp[]
+  templates     TaskTemplate[]
   // Shown on invoices and quotes
-  logoUrl      String?
-  bizPhone     String             @default("")
-  bizAddress   String             @default("")
-  payInfo      String             @default("") // how to pay: InstaPay, wallet, bank account…
-  fxRates      String             @default("{}") // JSON {"USD": 48.5}: 1 unit = this many of the main currency
-  leads        Lead[]
-  meetings     Meeting[]
-  budgets      String             @default("{}") // JSON {"print": 500}: monthly spending limit per expense category
-  weeklyEmail  Boolean            @default(false) // Friday summary by email
-  lastWeekly   String? // "YYYY-MM-DD" of the last weekly email, so a week is never sent twice
-  reviewsToken String?            @unique // public page of chosen client reviews
+  logoUrl       String?
+  bizPhone      String             @default("")
+  bizAddress    String             @default("")
+  payInfo       String             @default("") // how to pay: InstaPay, wallet, bank account…
+  fxRates       String             @default("{}") // JSON {"USD": 48.5}: 1 unit = this many of the main currency
+  leads         Lead[]
+  meetings      Meeting[]
+  budgets       String             @default("{}") // JSON {"print": 500}: monthly spending limit per expense category
+  weeklyEmail   Boolean            @default(false) // Friday summary by email
+  lastWeekly    String? // "YYYY-MM-DD" of the last weekly email, so a week is never sent twice
+  reviewsToken  String?            @unique // public page of chosen client reviews
 }
 
 model Task {
@@ -83,6 +84,7 @@ model Task {
   showcase         Boolean       @default(false) // the owner chose to show this review on the public reviews page
   planDay          DateTime? // the day of the week plan this job is placed on (local midnight)
   estimate         Int? // estimated minutes of work, for the week plan
+  nudgedAt         DateTime? // last follow-up sent to the client about delivered work awaiting their reply
 
   @@index([userId, status])
 }
@@ -138,20 +140,22 @@ model AppSetting {
 
 // A price quote sent to a client before the work starts. Accepting it creates a task.
 model Quote {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  client       String   @default("")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client       String    @default("")
   title        String
   items        Json // [{ desc: string, amount: number }]
-  validDays    Int      @default(14)
+  validDays    Int       @default(14)
   deliveryDays Int?
-  notes        String   @default("")
-  status       String   @default("draft") // draft | accepted
+  notes        String    @default("")
+  status       String    @default("draft") // draft | accepted
   taskId       String?
-  shareToken   String?  @unique // public link the client opens (and can accept from)
-  createdAt    DateTime @default(now())
+  shareToken   String?   @unique // public link the client opens (and can accept from)
+  createdAt    DateTime  @default(now())
   currency     String? // null = the account's main currency
+  sharedAt     DateTime? // when the link was made: waiting for the client's reply counts from here
+  nudgedAt     DateTime? // last follow-up sent; waiting counts again from here
 
   @@index([userId, createdAt])
 }
@@ -298,6 +302,8 @@ model Contract {
   userId       String
   body         String
   shareToken   String?   @unique
+  sharedAt     DateTime? // when the link was made
+  nudgedAt     DateTime? // last follow-up sent
   acceptedAt   DateTime?
   acceptedName String?
   acceptedBody String?

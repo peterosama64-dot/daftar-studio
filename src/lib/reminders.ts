@@ -20,7 +20,7 @@ const cut = (s: string) => (s.length > MAX_BODY ? s.slice(0, MAX_BODY - 1).trimE
  * follow up and — on Sundays only — how much clients still owe. Null when there is nothing to say, so quiet
  * days send no notification. The title names the most pressing kind.
  */
-export function buildDigest(tasks: DigestTask[], today: Date, owed?: DigestOwed, dues: DigestDue[] = [], follow: string[] = [], meets: DigestMeeting[] = []): { title: string; body: string; count: number } | null {
+export function buildDigest(tasks: DigestTask[], today: Date, owed?: DigestOwed, dues: DigestDue[] = [], follow: string[] = [], meets: DigestMeeting[] = [], waiting: string[] = []): { title: string; body: string; count: number } | null {
   const open = tasks.filter((t) => t.status !== "done" && t.due);
   const overdue = open.filter((t) => daysUntil(t.due, today)! < 0);
   const dueToday = open.filter((t) => daysUntil(t.due, today) === 0);
@@ -32,7 +32,8 @@ export function buildDigest(tasks: DigestTask[], today: Date, owed?: DigestOwed,
   const duesLine = dues.length
     ? `دفعات مستحقة: ${dues.map((d) => `${d.label} ${d.client ? `${d.title} (${d.client})` : d.title} ${fmt(d.amount)}`).join("، ")}` : "";
   const followLine = follow.length ? `تابع مع: ${follow.join("، ")}` : "";
-  if (!count && !meetLine && !duesLine && !followLine) {
+  const waitLine = waiting.length ? `مستني رد: ${waiting.join("، ")}` : "";
+  if (!count && !meetLine && !duesLine && !followLine && !waitLine) {
     return owedLine ? { title: "فلوسك عند العملاء", body: `${owedLine}. افتح «الفلوس» وشوف مين.`, count: 0 } : null;
   }
 
@@ -40,7 +41,7 @@ export function buildDigest(tasks: DigestTask[], today: Date, owed?: DigestOwed,
   if (overdue.length) parts.push(`متأخر: ${overdue.map(label).join("، ")}`);
   if (dueToday.length) parts.push(`النهارده: ${dueToday.map(label).join("، ")}`);
   if (tomorrow.length) parts.push(`بكرة: ${tomorrow.map(label).join("، ")}`);
-  for (const l of [meetLine, duesLine, followLine, owedLine]) if (l) parts.push(l);
+  for (const l of [meetLine, duesLine, followLine, waitLine, owedLine]) if (l) parts.push(l);
 
   const title =
     overdue.length ? `عندك ${overdue.length === 1 ? "مهمة متأخرة" : `${overdue.length} مهام متأخرة`}` :
@@ -48,7 +49,8 @@ export function buildDigest(tasks: DigestTask[], today: Date, owed?: DigestOwed,
     tomorrow.length ? `بكرة عندك ${tomorrow.length === 1 ? "مهمة" : `${tomorrow.length} مهام`}` :
     meets.length ? `النهارده عندك ${meets.length === 1 ? "ميعاد" : `${meets.length} مواعيد`}` :
     dues.length ? (dues.length === 1 ? "عندك دفعة مستحقة" : `عندك ${dues.length} دفعات مستحقة`) :
-    follow.length === 1 ? "عندك عميل محتاج متابعة" : `عندك ${follow.length} عملاء محتاجين متابعة`;
+    follow.length ? (follow.length === 1 ? "عندك عميل محتاج متابعة" : `عندك ${follow.length} عملاء محتاجين متابعة`) :
+    waiting.length === 1 ? "في عميل مارّدش عليك" : `في ${waiting.length} عملاء مارّدوش عليك`;
   return { title, body: cut(parts.join(" · ")), count };
 }
 

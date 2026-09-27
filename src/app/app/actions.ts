@@ -310,7 +310,7 @@ export async function acceptQuote(id: string) {
 // ---------- client links ----------
 export async function shareQuote(id: string) {
   const userId = await requireUser();
-  await prisma.quote.updateMany({ where: { id, userId, shareToken: null }, data: { shareToken: newToken() } });
+  await prisma.quote.updateMany({ where: { id, userId, shareToken: null }, data: { shareToken: newToken(), sharedAt: now(), nudgedAt: null } });
   revalidatePath(`/app/quotes/${id}`);
 }
 export async function unshareQuote(id: string) {
@@ -785,13 +785,14 @@ export async function saveContract(taskId: string, f: FormData) {
 /** Start a new version after acceptance: the client will need to accept again. */
 export async function reopenContract(taskId: string) {
   const userId = await requireUser();
-  await prisma.contract.updateMany({ where: { taskId, userId }, data: { acceptedAt: null, acceptedName: null, acceptedBody: null } });
+  // A new version is a new request to the client: the wait for their reply starts over.
+  await prisma.contract.updateMany({ where: { taskId, userId }, data: { acceptedAt: null, acceptedName: null, acceptedBody: null, sharedAt: now(), nudgedAt: null } });
   contractPath(taskId);
 }
 
 export async function shareContract(taskId: string) {
   const userId = await requireUser();
-  await prisma.contract.updateMany({ where: { taskId, userId, shareToken: null }, data: { shareToken: newToken() } });
+  await prisma.contract.updateMany({ where: { taskId, userId, shareToken: null }, data: { shareToken: newToken(), sharedAt: now(), nudgedAt: null } });
   contractPath(taskId);
 }
 
@@ -904,4 +905,27 @@ export async function autoPlanWeek(start: string) {
   const free = { OR: [{ planDay: null }, { planDay: { lt: todayStart } }] };
   await prisma.$transaction([...plan].map(([id, day]) => prisma.task.updateMany({ where: { id, userId, ...free }, data: { planDay: day } })));
   weekPath();
+}
+
+// ---------- waiting on clients ----------
+/** «بعت متابعة»: the wait counts again from now. */
+export async function markNudged(kind: string, id: string) {
+  const userId = await requireUser();
+  const data = { nudgedAt: now() };
+  if (kind === "delivery") await prisma.task.updateMany({ where: { id, userId }, data });
+  else if (kind === "quote") await prisma.quote.updateMany({ where: { id, userId }, data });
+  else if (kind === "contract") await prisma.contract.updateMany({ where: { taskId: id, userId }, data });
+  revalidatePath("/app/waiting"); revalidatePath("/app");
+}
+
+// ---------- calendar feed ----------
+export async function shareCalendar() {
+  const userId = await requireUser();
+  await prisma.user.updateMany({ where: { id: userId, calendarToken: null }, data: { calendarToken: newToken() } });
+  revalidatePath("/app/meetings");
+}
+export async function unshareCalendar() {
+  const userId = await requireUser();
+  await prisma.user.updateMany({ where: { id: userId }, data: { calendarToken: null } });
+  revalidatePath("/app/meetings");
 }

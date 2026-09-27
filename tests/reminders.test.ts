@@ -9,6 +9,7 @@ const db = vi.hoisted(() => ({
   subs: [] as { id: string; userId: string; endpoint: string; p256dh: string; auth: string }[],
   settings: new Map<string, string>(),
   dues: [] as { userId: string; label: string; amount: number; due: Date; paidAt: Date | null; task: { title: string; client: string } }[],
+  quotes: [] as { userId: string; id: string; title: string; client: string; shareToken: string; sharedAt: Date | null; createdAt: Date; nudgedAt: Date | null }[],
   meetings: [] as { id: string; userId: string; title: string; client: string; at: Date; place: string; remindedAt: Date | null }[],
 }));
 vi.mock("../src/lib/db", () => {
@@ -30,11 +31,13 @@ vi.mock("../src/lib/db", () => {
         },
       },
       task: {
-        findMany: async ({ where }: any) => where.agreed
+        findMany: async ({ where }: any) => where.reviewToken ? [] : where.agreed
           ? db.tasks.filter((t) => t.userId === where.userId && (t.agreed ?? 0) > where.agreed.gt).map((t, i) => ({ id: String(i), ...t }))
           : db.tasks.filter((t) => t.userId === where.userId && t.status !== "done" && t.due && t.due < where.due.lt),
       },
       lead: { findMany: async () => [] },
+      quote: { findMany: async ({ where }: any) => db.quotes.filter((q) => q.userId === where.userId) },
+      contract: { findMany: async () => [] },
       meeting: {
         findMany: async ({ where }: any) => db.meetings.filter((m) =>
           (where.userId ? m.userId === where.userId : db.subs.some((s) => s.userId === m.userId))
@@ -138,7 +141,7 @@ describe("buildMonthly", () => {
 
 describe("daily reminder job", () => {
   beforeEach(() => {
-    db.users.clear(); db.tasks = []; db.entries = []; db.subs = []; db.meetings = []; received.length = 0; status = 201;
+    db.users.clear(); db.tasks = []; db.entries = []; db.subs = []; db.meetings = []; db.quotes = []; received.length = 0; status = 201;
     db.users.set("u1", { id: "u1", lastDigest: null });
     db.users.set("u2", { id: "u2", lastDigest: null });
     db.subs.push({ id: "s1", userId: "u1", endpoint: `${base}/push/one`, p256dh, auth });
@@ -228,6 +231,20 @@ describe("daily reminder job", () => {
       await cron(new Request("http://x/api/cron/reminders"));
       const u2 = received.find((r) => r.endpoint.endsWith("/push/two"))!;
       expect(JSON.parse(u2.payload)).toMatchObject({ title: "النهارده عندك ميعاد", body: "مواعيدك: 4:00 م اجتماع (سكر)" });
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("mentions a quote the client hasn't answered on day 3 only", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-09-28T06:00:00Z"));
+      db.tasks = [];
+      db.quotes.push({ userId: "u2", id: "q1", title: "هوية", client: "زيتون", shareToken: "tok", sharedAt: new Date(2026, 8, 25, 12), createdAt: new Date(2026, 8, 20), nudgedAt: null });
+      await cron(new Request("http://x/api/cron/reminders"));
+      expect(received.map((r) => JSON.parse(r.payload))).toEqual([expect.objectContaining({ title: "في عميل مارّدش عليك", body: "مستني رد: زيتون (3 أيام)" })]);
+      vi.setSystemTime(new Date("2026-09-29T06:00:00Z"));
+      await cron(new Request("http://x/api/cron/reminders"));
+      expect(received).toHaveLength(1);
     } finally { vi.useRealTimers(); }
   });
 

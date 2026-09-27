@@ -57,3 +57,49 @@ describe("week plan", () => {
     expect(at("free")).toBe("2026-10-01"); // no deadline: first day with 4h free (28–30 are full enough)
   });
 });
+
+import { buildIcal, fold, icalText } from "../src/lib/ical";
+import { followUpText, waitingDays, waitingDigest, waitingList } from "../src/lib/waiting";
+
+describe("calendar feed", () => {
+  it("escapes and folds lines at 75 bytes without breaking Arabic letters", () => {
+    expect(icalText("a,b;c\\d\nهـ")).toBe("a\\,b\;c\\\\d\\nهـ");
+    const long = "SUMMARY:" + "تسليم لوجو ".repeat(20);
+    const folded = fold(long);
+    for (const l of folded.split("\r\n")) expect(new TextEncoder().encode(l).length).toBeLessThanOrEqual(75);
+    expect(folded.split("\r\n ").join("")).toBe(long);
+  });
+  it("writes all-day deadlines and timed meetings in the studio's timezone", () => {
+    const ics = buildIcal("دفتر", [
+      { uid: "t1@x", title: "تسليم: لوجو", day: new Date(2026, 8, 30) },
+      { uid: "m1@x", title: "مكالمة, نون", start: new Date(2026, 9, 1, 14, 30), minutes: 60, location: "meet.google.com/x" },
+    ], "Africa/Cairo", new Date(Date.UTC(2026, 8, 27, 10)));
+    expect(ics).toContain("DTSTART;VALUE=DATE:20260930\r\nDTEND;VALUE=DATE:20261001");
+    expect(ics).toContain("DTSTART;TZID=Africa/Cairo:20261001T143000\r\nDTEND;TZID=Africa/Cairo:20261001T153000");
+    expect(ics).toContain("SUMMARY:مكالمة\\, نون");
+    expect(ics).toContain("DTSTAMP:20260927T100000Z");
+    expect(ics.startsWith("BEGIN:VCALENDAR\r\n") && ics.endsWith("END:VCALENDAR\r\n")).toBe(true);
+  });
+});
+
+describe("waiting on clients", () => {
+  const today = new Date(2026, 8, 28, 10);
+  const item = { kind: "quote" as const, id: "q", title: "هوية", client: "زيتون", link: "/s/q/x", href: "/app/quotes/q" };
+  it("counts from sending, or from the last follow-up", () => {
+    expect(waitingDays({ since: new Date(2026, 8, 25, 18), nudgedAt: null }, today)).toBe(3);
+    expect(waitingDays({ since: new Date(2026, 8, 20), nudgedAt: new Date(2026, 8, 27) }, today)).toBe(1);
+  });
+  it("mentions an item in the morning push on days 3, 7 and 14 only", () => {
+    const list = waitingList([
+      { ...item, since: new Date(2026, 8, 25), nudgedAt: null },
+      { ...item, id: "b", client: "", title: "منيو", since: new Date(2026, 8, 24), nudgedAt: null },
+      { ...item, id: "c", client: "نون", since: new Date(2026, 8, 21), nudgedAt: null },
+    ], today);
+    expect(list.map((w) => w.days)).toEqual([7, 4, 3]);
+    expect(waitingDigest(list)).toEqual(["نون (7 أيام)", "زيتون (3 أيام)"]);
+  });
+  it("writes a polite follow-up with the link", () => {
+    const t = followUpText({ kind: "delivery", title: "لوجو", client: "سكر" }, "https://x/s/r/abc", "بيتر");
+    expect(t).toBe("أهلاً يا سكر 👋\n\nحبيت أطمن إن شغل «لوجو» وصلك تمام.\nلو في أي ملاحظات أو تعديلات قولّي، ولو كله تمام تقدر توافق عليه من هنا:\nhttps://x/s/r/abc\n\nمستني ردّك 🙏\nبيتر");
+  });
+});
