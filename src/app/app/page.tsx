@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth";
 import { Capture } from "@/components/capture";
 import { MoneyStrip } from "@/components/money-strip";
 import { GoalCard } from "@/components/goal-card";
+import { HomeInsights } from "@/components/home-insights";
 import Link from "next/link";
 import { stopTimer } from "./actions";
 import { Button } from "@/components/ui";
@@ -42,6 +43,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
       <MoneyStrip I={totals.I} S={totals.S} X={totals.X} net={totals.net} cur={cur.short} />
       <GoalCard income={totals.I} goal={user?.incomeGoal ?? null} month={month} today={today} cur={cur.short} />
       <Capture />
+      {(tasks.length > 0 || entries.length > 0) && <HomeInsights uid={uid} today={today} entries={entries} tasks={tasks} />}
       {!tasks.length && !entries.length && (
         <Empty>الدفتر لسه فاضي. قول أو اكتب أول حاجة فوق، زي «لازم أسلّم البوستر السبت، واستلمت ٣٠٠٠ من العميل».</Empty>
       )}
