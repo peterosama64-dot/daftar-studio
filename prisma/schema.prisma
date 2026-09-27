@@ -41,6 +41,8 @@ model User {
   fxRates      String             @default("{}") // JSON {"USD": 48.5}: 1 unit = this many of the main currency
   leads        Lead[]
   budgets      String             @default("{}") // JSON {"print": 500}: monthly spending limit per expense category
+  weeklyEmail  Boolean            @default(false) // Friday summary by email
+  lastWeekly   String? // "YYYY-MM-DD" of the last weekly email, so a week is never sent twice
 }
 
 model Task {

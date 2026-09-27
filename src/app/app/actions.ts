@@ -19,6 +19,9 @@ import { loadFx } from "@/lib/data";
 import { pickCurrency, type Fx } from "@/lib/fx";
 import { LEAD_STATUSES } from "@/lib/leads";
 import { CATEGORIES, pickCategory } from "@/lib/categories";
+import { mailConfigured, sendMail } from "@/lib/mail";
+import { buildWeekly } from "@/lib/weekly";
+import { weeklyFor } from "@/lib/weekly-data";
 import type { ReminderData } from "@/lib/remind";
 
 const done = () => revalidatePath("/app", "layout");
@@ -149,6 +152,28 @@ export async function setEntryCategory(id: string, f: FormData) {
   const raw = str(f, "category", 20);
   await prisma.entry.updateMany({ where: { id, userId, kind: { in: ["expense", "subscription"] } }, data: { category: CATEGORIES.some((c) => c.key === raw) ? raw : null } });
   done();
+}
+
+/** Turn the Friday summary email on or off. */
+export async function setWeeklyEmail(on: boolean) {
+  const userId = await requireUser();
+  await prisma.user.update({ where: { id: userId }, data: { weeklyEmail: on } });
+  revalidatePath("/app/settings");
+}
+
+const testSends = new Map<string, number>();
+/** Send this week's summary now, to check it arrives (at most once every 2 minutes per user). */
+export async function sendWeeklyTest(): Promise<{ ok: boolean; message: string }> {
+  const userId = await requireUser();
+  if (!mailConfigured()) return { ok: false, message: "الإيميل لسه مش متفعّل على الموقع." };
+  const last = testSends.get(userId) ?? 0;
+  if (Date.now() - last < 120_000) return { ok: false, message: "استنى دقيقتين وجرّب تاني." };
+  testSends.set(userId, Date.now());
+  const w = await weeklyFor(userId, now());
+  const mail = w && buildWeekly(w.data);
+  if (!w || !mail) return { ok: false, message: "مفيش حاجة تتقال الأسبوع ده لسه." };
+  const r = await sendMail({ to: w.to, ...mail });
+  return r.ok ? { ok: true, message: `اتبعت على ${w.to} ✓` } : { ok: false, message: "مقدرناش نبعته دلوقتي. جرّب تاني بعدين." };
 }
 
 /** Monthly spending limits per category (empty = no limit). */
