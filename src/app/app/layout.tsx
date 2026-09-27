@@ -5,12 +5,16 @@ export const dynamic = "force-dynamic";
 import { Sidebar, TabBar } from "@/components/nav";
 import Link from "next/link";
 import { Brand } from "@/components/ui";
+import { OfflineKit } from "@/components/offline-kit";
+import { requireUser } from "@/lib/auth";
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const uid = await requireUser();
   return (
     <div className="flex min-h-dvh">
       <Suspense><Sidebar /></Suspense>
       <div className="min-w-0 flex-1">
+        <OfflineKit uid={uid} />
         <div className="flex items-center justify-between px-4 pt-4 lg:hidden print:hidden">
           <Brand href="/app" />
           <Link href="/app/search" aria-label="بحث" className="grid size-10 place-items-center rounded-xl border border-rule bg-sheet text-muted hover:text-ink">
