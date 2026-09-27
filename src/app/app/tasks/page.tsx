@@ -58,6 +58,7 @@ export default async function Tasks({ searchParams }: { searchParams: SP }) {
           </select>
           <Button small>ضيف</Button>
         </form>
+        <p className="mt-3 text-sm text-muted">شغل بيتكرر؟ <Link href="/app/templates" className="text-cyan">اعمله من قالب</Link> بسعره وخطواته.</p>
       </details>
     </>
   );

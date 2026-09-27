@@ -10,13 +10,14 @@ const ITEMS = [
   { href: "/app/calendar", label: "التقويم" },
   { href: "/app/recurring", label: "شغل شهري" },
   { href: "/app/quotes", label: "عروض الأسعار" },
+  { href: "/app/templates", label: "القوالب" },
   { href: "/app/money", label: "الفلوس" },
   { href: "/app/inbox", label: "الرسايل" },
   { href: "/app/report", label: "التقرير" },
   { href: "/app/clients", label: "العملاء" },
   { href: "/app/settings", label: "الإعدادات" },
 ];
-const MORE = ["/app/search", "/app/calendar", "/app/recurring", "/app/quotes", "/app/inbox", "/app/report", "/app/clients", "/app/settings", "/app/more"];
+const MORE = ["/app/search", "/app/calendar", "/app/recurring", "/app/quotes", "/app/templates", "/app/inbox", "/app/report", "/app/clients", "/app/settings", "/app/more"];
 
 const isActive = (path: string, href: string) => (href === "/app" ? path === "/app" : path.startsWith(href));
 

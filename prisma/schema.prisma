@@ -32,6 +32,7 @@ model User {
   recurring    RecurringJob[]
   clientInfos  ClientInfo[]
   syncedOps    SyncedOp[]
+  templates    TaskTemplate[]
 }
 
 model Task {
@@ -226,4 +227,19 @@ model Installment {
 
   @@index([taskId])
   @@index([userId, paidAt])
+}
+
+// A kind of job done again and again (logo, social pack…): its price, steps and delivery time, to start a task from.
+model TaskTemplate {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  amount    Float?
+  days      Int? // delivery time: the new task is due this many days after it's made
+  steps     String   @default("") // one step per line, becomes the task's checklist
+  notes     String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
