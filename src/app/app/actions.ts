@@ -194,9 +194,14 @@ export async function setGoal(f: FormData) {
 }
 
 /** The name shown on invoices. */
+/** Your details on invoices and quotes: name, phone, address and how clients can pay you. */
 export async function setName(f: FormData) {
   const userId = await requireUser();
-  await prisma.user.update({ where: { id: userId }, data: { name: str(f, "name", 80) } });
+  const data: { name: string; bizPhone?: string; bizAddress?: string; payInfo?: string } = { name: str(f, "name", 80) };
+  if (f.has("bizPhone")) data.bizPhone = str(f, "bizPhone", 40);
+  if (f.has("bizAddress")) data.bizAddress = str(f, "bizAddress", 200);
+  if (f.has("payInfo")) data.payInfo = str(f, "payInfo", 600);
+  await prisma.user.update({ where: { id: userId }, data });
   done();
 }
 

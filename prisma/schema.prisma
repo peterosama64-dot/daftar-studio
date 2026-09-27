@@ -33,6 +33,11 @@ model User {
   clientInfos  ClientInfo[]
   syncedOps    SyncedOp[]
   templates    TaskTemplate[]
+  // Shown on invoices and quotes
+  logoUrl      String?
+  bizPhone     String             @default("")
+  bizAddress   String             @default("")
+  payInfo      String             @default("") // how to pay: InstaPay, wallet, bank account…
 }
 
 model Task {
