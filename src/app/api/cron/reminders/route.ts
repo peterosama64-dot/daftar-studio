@@ -56,7 +56,11 @@ export async function GET(req: Request) {
       where: { userId: u.id, status: { in: ["new", "quoted", "waiting"] }, nextAt: { not: null, lt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1) } },
       select: { name: true }, orderBy: { nextAt: "asc" }, take: 8,
     })).map((l) => l.name);
-    const digest = buildDigest(tasks, today, owed ? { total: owed.total, clients: owed.clients.length, currency } : undefined, dues, follow);
+    const meets = await prisma.meeting.findMany({
+      where: { userId: u.id, at: { gte: today, lt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1) } },
+      select: { title: true, client: true, at: true }, orderBy: { at: "asc" }, take: 8,
+    });
+    const digest = buildDigest(tasks, today, owed ? { total: owed.total, clients: owed.clients.length, currency } : undefined, dues, follow, meets);
     if (!digest) { quiet++; continue; }
     if ((await pushToUser(u.id, { title: digest.title, body: digest.body, url: "/app/tasks" })).sent) sent++;
   }

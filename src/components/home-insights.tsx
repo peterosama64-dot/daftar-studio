@@ -17,7 +17,7 @@ const monthName = (k: string) => AR_MONTHS[Number(k.slice(5, 7)) - 1];
 export async function HomeInsights({ uid, today, entries, tasks }: { uid: string; today: Date; entries: E[]; tasks: T[] }) {
   const now = monthKey(today), next = shiftMonth(now, 1);
   const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-  const [fx, user, duePay, leads, reviews, open, jobs] = await Promise.all([
+  const [fx, user, duePay, leads, reviews, open, jobs, meetings] = await Promise.all([
     loadFx(uid),
     userRow(uid),
     prisma.installment.findMany({ where: { userId: uid, paidAt: null, due: { not: null, lt: endOfToday } }, include: { task: { select: { title: true, currency: true } } }, orderBy: { due: "asc" }, take: 10 }),
@@ -32,6 +32,7 @@ export async function HomeInsights({ uid, today, entries, tasks }: { uid: string
       select: { id: true, title: true, client: true, agreed: true, paid: true, due: true, status: true, recurringId: true, currency: true, installments: { select: { amount: true, due: true, paidAt: true }, orderBy: { position: "asc" } } },
     }),
     prisma.recurringJob.findMany({ where: { userId: uid, active: true } }),
+    prisma.meeting.findMany({ where: { userId: uid, at: { gte: today, lt: endOfToday } }, select: { id: true, title: true, client: true, at: true }, orderBy: { at: "asc" }, take: 5 }),
   ]);
   const items = attentionItems({
     today, fmt: (n) => `${fmt(n)} ${fx.short(null)}`,
@@ -40,6 +41,7 @@ export async function HomeInsights({ uid, today, entries, tasks }: { uid: string
     reviews: reviews.map((r) => ({ id: r.id, title: r.title, client: r.client, approvedAt: r.approvedAt, lastDelivery: r.deliveries[0]?.createdAt ?? null, lastClientRevision: r.revisions[0]?.createdAt ?? null })),
     doneUnpaid: tasks.filter((t) => t.status === "done" && t.doneAt && t.agreed && t.agreed > (t.paid ?? 0))
       .map((t) => ({ id: t.id, title: t.title, remaining: fx.toBase(t.agreed! - (t.paid ?? 0), t.currency), doneAt: t.doneAt! })),
+    meetings,
     overBudget: spendByCategory(entries, now, parseBudgets(user?.budgets)).filter((r) => r.over).map((r) => r.label),
   });
 

@@ -1,0 +1,21 @@
+# Meeting reminders need a check every few minutes; Vercel's free cron only runs once a day, so GitHub
+# runs this instead. The endpoint only sends reminders that are due, each once, so extra calls are harmless.
+# If CRON_SECRET is set in Vercel, add the same value as a repository secret named CRON_SECRET.
+name: meeting reminders
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+permissions: {}
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Send due meeting reminders
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          auth=()
+          if [ -n "$CRON_SECRET" ]; then auth=(-H "Authorization: Bearer $CRON_SECRET"); fi
+          curl -fsS --retry 2 --max-time 60 "${auth[@]}" https://daftar-studio-neon.vercel.app/api/cron/meetings

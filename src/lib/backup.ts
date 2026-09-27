@@ -13,7 +13,7 @@ export const BACKUP_APP = "daftar-studio";
 export const BACKUP_VERSION = 1;
 
 export async function buildBackup(userId: string) {
-  const [user, tasks, entries, quotes, recurring, clients, templates] = await Promise.all([
+  const [user, tasks, entries, quotes, recurring, clients, templates, meetings] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { name: true, currency: true, fxRates: true, budgets: true, incomeGoal: true, logoUrl: true, bizPhone: true, bizAddress: true, payInfo: true } }),
     prisma.task.findMany({
       where: { userId }, orderBy: { createdAt: "asc" },
@@ -30,6 +30,7 @@ export async function buildBackup(userId: string) {
     prisma.recurringJob.findMany({ where: { userId } }),
     prisma.clientInfo.findMany({ where: { userId }, select: { name: true, phone: true, email: true, notes: true } }),
     prisma.taskTemplate.findMany({ where: { userId }, select: { name: true, amount: true, days: true, steps: true, notes: true, createdAt: true } }),
+    prisma.meeting.findMany({ where: { userId }, orderBy: { at: "asc" }, select: { title: true, client: true, at: true, place: true, notes: true, createdAt: true } }),
   ]);
   return {
     app: BACKUP_APP, version: BACKUP_VERSION, exportedAt: new Date().toISOString(),
@@ -50,7 +51,7 @@ export async function buildBackup(userId: string) {
       taskRef: q.taskId, currency: q.currency, createdAt: q.createdAt,
     })),
     recurring: recurring.map((j) => ({ ref: j.id, title: j.title, client: j.client, amount: j.amount, dayOfMonth: j.dayOfMonth, active: j.active, lastMonth: j.lastMonth, createdAt: j.createdAt })),
-    clients, templates,
+    clients, templates, meetings,
   };
 }
 
@@ -100,11 +101,12 @@ export const BackupSchema = z.object({
   recurring: arr(z.object({ ref: s(64), title: s(200).min(1), client: s(80).default(""), amount: money, dayOfMonth: z.number().int().min(1).max(31).default(1), active: z.boolean().default(true), lastMonth: s(7).nullable().default(null), createdAt: date }), 500),
   clients: arr(z.object({ name: s(80).min(1), phone: s(40).default(""), email: s(200).default(""), notes: s(2000).default("") }), 5000),
   templates: arr(z.object({ name: s(200).min(1), amount: money.nullable().default(null), days: z.number().int().min(0).max(365).nullable().default(null), steps: s(6000).default(""), notes: s(2000).default(""), createdAt: date }), 1000),
+  meetings: arr(z.object({ title: s(200).min(1), client: s(80).default(""), at: date, place: s(300).default(""), notes: s(2000).default(""), createdAt: date }), 10_000),
 });
 export type Backup = z.infer<typeof BackupSchema>;
 
 export function backupCounts(b: Backup) {
-  return { tasks: b.tasks.length, entries: b.entries.length, quotes: b.quotes.length, recurring: b.recurring.length, clients: b.clients.length, templates: b.templates.length };
+  return { tasks: b.tasks.length, entries: b.entries.length, quotes: b.quotes.length, recurring: b.recurring.length, clients: b.clients.length, templates: b.templates.length, meetings: b.meetings.length };
 }
 
 /**
@@ -123,6 +125,7 @@ export async function restoreBackup(userId: string, b: Backup) {
     await tx.recurringJob.deleteMany({ where: { userId } });
     await tx.clientInfo.deleteMany({ where: { userId } });
     await tx.taskTemplate.deleteMany({ where: { userId } });
+    await tx.meeting.deleteMany({ where: { userId } });
     if (b.profile) await tx.user.update({ where: { id: userId }, data: b.profile });
     await tx.recurringJob.createMany({ data: b.recurring.map(({ ref, ...j }) => ({ ...j, id: jobIds.get(ref)!, userId })) });
     await tx.entry.createMany({ data: b.entries.map(({ ref, ...e }) => ({ ...e, id: entryIds.get(ref)!, userId })) });
@@ -144,5 +147,6 @@ export async function restoreBackup(userId: string, b: Backup) {
     await tx.quote.createMany({ data: b.quotes.map(({ taskRef, ...q }) => ({ ...q, userId, taskId: taskRef ? taskIds.get(taskRef) ?? null : null })) });
     await tx.clientInfo.createMany({ data: clientNames.map((c) => ({ ...c, userId })) });
     await tx.taskTemplate.createMany({ data: b.templates.map((t) => ({ ...t, userId })) });
+    await tx.meeting.createMany({ data: b.meetings.map((m) => ({ ...m, userId })) });
   }, { timeout: 60_000, maxWait: 10_000 });
 }

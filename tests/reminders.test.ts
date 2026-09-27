@@ -9,6 +9,7 @@ const db = vi.hoisted(() => ({
   subs: [] as { id: string; userId: string; endpoint: string; p256dh: string; auth: string }[],
   settings: new Map<string, string>(),
   dues: [] as { userId: string; label: string; amount: number; due: Date; paidAt: Date | null; task: { title: string; client: string } }[],
+  meetings: [] as { id: string; userId: string; title: string; client: string; at: Date; place: string; remindedAt: Date | null }[],
 }));
 vi.mock("../src/lib/db", () => {
   const notToday = (u: { lastDigest: string | null }, key: string) => u.lastDigest === null || u.lastDigest !== key;
@@ -34,6 +35,17 @@ vi.mock("../src/lib/db", () => {
           : db.tasks.filter((t) => t.userId === where.userId && t.status !== "done" && t.due && t.due < where.due.lt),
       },
       lead: { findMany: async () => [] },
+      meeting: {
+        findMany: async ({ where }: any) => db.meetings.filter((m) =>
+          (where.userId ? m.userId === where.userId : db.subs.some((s) => s.userId === m.userId))
+          && (!("remindedAt" in where) || m.remindedAt === null)
+          && m.at >= where.at.gte && (where.at.lt ? m.at < where.at.lt : m.at <= where.at.lte)),
+        updateMany: async ({ where, data }: any) => {
+          const m = db.meetings.find((x) => x.id === where.id && x.remindedAt === null && x.at.getTime() === where.at.getTime());
+          if (!m) return { count: 0 };
+          m.remindedAt = data.remindedAt; return { count: 1 };
+        },
+      },
       installment: {
         findMany: async ({ where }: any) => db.dues.filter((d) => d.userId === where.userId && !d.paidAt && d.due < where.due.lt),
       },
@@ -54,6 +66,7 @@ vi.mock("../src/lib/db", () => {
 
 import { buildDigest, buildMonthly } from "../src/lib/reminders";
 import { GET as cron } from "../src/app/api/cron/reminders/route";
+import { GET as meetingsCron } from "../src/app/api/cron/meetings/route";
 import { dayKey, now } from "../src/lib/dates";
 
 // Record what would go to the push service. The real encryption + VAPID signing is checked
@@ -125,7 +138,7 @@ describe("buildMonthly", () => {
 
 describe("daily reminder job", () => {
   beforeEach(() => {
-    db.users.clear(); db.tasks = []; db.entries = []; db.subs = []; received.length = 0; status = 201;
+    db.users.clear(); db.tasks = []; db.entries = []; db.subs = []; db.meetings = []; received.length = 0; status = 201;
     db.users.set("u1", { id: "u1", lastDigest: null });
     db.users.set("u2", { id: "u2", lastDigest: null });
     db.subs.push({ id: "s1", userId: "u1", endpoint: `${base}/push/one`, p256dh, auth });
@@ -186,10 +199,44 @@ describe("daily reminder job", () => {
     } finally { vi.useRealTimers(); }
   });
 
+  it("reminds each meeting once, about an hour before, and again only if it is moved", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-09-28T10:00:00Z")); // 13:00 in Cairo
+      const at = (h: number, m: number) => new Date(2026, 8, 28, h, m);
+      db.meetings.push(
+        { id: "m1", userId: "u1", title: "مكالمة", client: "نون", at: at(13, 45), place: "", remindedAt: null },
+        { id: "m2", userId: "u1", title: "بعدين", client: "", at: at(15, 0), place: "", remindedAt: null },
+        { id: "m3", userId: "u2", title: "فاتت", client: "", at: at(12, 0), place: "", remindedAt: null },
+        { id: "m4", userId: "nobody", title: "من غير تنبيهات", client: "", at: at(13, 30), place: "", remindedAt: null },
+      );
+      const r1 = await (await meetingsCron(new Request("http://x/api/cron/meetings"))).json();
+      expect(r1).toMatchObject({ due: 1, sent: 1 });
+      expect(JSON.parse(received[0].payload)).toEqual({ title: "بعد 45 دقيقة: مكالمة مع نون", body: "الساعة 1:45 م", url: "/app/meetings", tag: "daftar-meeting-m1" });
+      expect((await (await meetingsCron(new Request("http://x/api/cron/meetings"))).json()).sent).toBe(0);
+      vi.setSystemTime(new Date("2026-09-28T11:05:00Z")); // 14:05: m2 comes into range
+      expect((await (await meetingsCron(new Request("http://x/api/cron/meetings"))).json()).sent).toBe(1);
+      expect(received).toHaveLength(2);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("puts today's meetings in the morning push", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-09-28T06:00:00Z")); // 9:00 in Cairo
+      db.meetings.push({ id: "m9", userId: "u2", title: "اجتماع", client: "سكر", at: new Date(2026, 8, 28, 16, 0), place: "", remindedAt: null });
+      await cron(new Request("http://x/api/cron/reminders"));
+      const u2 = received.find((r) => r.endpoint.endsWith("/push/two"))!;
+      expect(JSON.parse(u2.payload)).toMatchObject({ title: "النهارده عندك ميعاد", body: "مواعيدك: 4:00 م اجتماع (سكر)" });
+    } finally { vi.useRealTimers(); }
+  });
+
   it("requires CRON_SECRET when it is set", async () => {
     process.env.CRON_SECRET = "s3cret";
     expect((await cron(new Request("http://x/api/cron/reminders"))).status).toBe(401);
     expect((await cron(new Request("http://x/api/cron/reminders", { headers: { authorization: "Bearer s3cret" } }))).status).toBe(200);
+    expect((await meetingsCron(new Request("http://x/api/cron/meetings"))).status).toBe(401);
+    expect((await meetingsCron(new Request("http://x/api/cron/meetings", { headers: { authorization: "Bearer s3cret" } }))).status).toBe(200);
     delete process.env.CRON_SECRET;
   });
 });
@@ -222,5 +269,49 @@ describe("digest with lead follow-ups", () => {
   it("adds them to a normal digest", () => {
     const d = buildDigest([{ title: "لوجو", client: "", due: today, status: "todo" }], today, undefined, [], ["نون"])!;
     expect(d.body).toContain("تابع مع: نون");
+  });
+});
+
+import { meetingReminder, placeLink, reminderWindow } from "../src/lib/meetings";
+import { clock, parseDayTime } from "../src/lib/dates";
+
+describe("meetings", () => {
+  const now = new Date(2026, 8, 28, 13, 30);
+  it("formats the clock the way people say it", () => {
+    expect(clock(new Date(2026, 8, 28, 14, 5))).toBe("2:05 م");
+    expect(clock(new Date(2026, 8, 28, 0, 0))).toBe("12:00 ص");
+    expect(clock(new Date(2026, 8, 28, 12, 30))).toBe("12:30 م");
+  });
+  it("parses a day and a time, rejecting nonsense", () => {
+    expect(parseDayTime("2026-09-28", "14:30")).toEqual(new Date(2026, 8, 28, 14, 30));
+    expect(parseDayTime("2026-09-28", "25:00")).toBeNull();
+    expect(parseDayTime("2026-02-30", "10:00")).toBeNull();
+    expect(parseDayTime("2026-09-28", "")).toBeNull();
+  });
+  it("reminds within the hour before, and not long after the start", () => {
+    const w = reminderWindow(now);
+    expect(w.lte).toEqual(new Date(2026, 8, 28, 14, 30));
+    expect(w.gte).toEqual(new Date(2026, 8, 28, 13, 25));
+  });
+  it("says how long is left", () => {
+    const m = { title: "مكالمة", client: "نون", at: new Date(2026, 8, 28, 14, 30), place: "meet.google.com/abc" };
+    expect(meetingReminder(m, now)).toEqual({ title: "بعد ساعة: مكالمة مع نون", body: "الساعة 2:30 م · meet.google.com/abc" });
+    expect(meetingReminder({ ...m, at: new Date(2026, 8, 28, 13, 50) }, now).title).toBe("بعد 20 دقيقة: مكالمة مع نون");
+    expect(meetingReminder({ ...m, title: "اجتماع نون", at: new Date(2026, 8, 28, 13, 35) }, now).title).toBe("بعد 5 دقايق: اجتماع نون");
+    expect(meetingReminder({ ...m, at: now }, now).title).toBe("دلوقتي: مكالمة مع نون");
+  });
+  it("turns meeting links into links, and leaves addresses alone", () => {
+    expect(placeLink("meet.google.com/abc-defg-hij")).toBe("https://meet.google.com/abc-defg-hij");
+    expect(placeLink("https://us02web.zoom.us/j/123")).toBe("https://us02web.zoom.us/j/123");
+    expect(placeLink("javascript:alert(1)")).toBeNull();
+    expect(placeLink("المعادي، شارع 9")).toBeNull();
+  });
+  it("puts today's meetings in the morning digest", () => {
+    const today = new Date(2026, 8, 28, 9, 0);
+    const g = buildDigest([], today, undefined, [], [], [{ title: "مكالمة", client: "نون", at: new Date(2026, 8, 28, 14, 30) }, { title: "اجتماع سكر", client: "سكر", at: new Date(2026, 8, 28, 17, 0) }])!;
+    expect(g).toEqual({ title: "النهارده عندك 2 مواعيد", body: "مواعيدك: 2:30 م مكالمة (نون)، 5:00 م اجتماع سكر", count: 0 });
+    const t = buildDigest([{ title: "لوجو", client: "", due: today, status: "todo" }], today, undefined, [], ["زيتون"], [{ title: "مكالمة", client: "", at: new Date(2026, 8, 28, 11, 0) }])!;
+    expect(t.title).toBe("النهارده عندك مهمة");
+    expect(t.body).toBe("النهارده: لوجو · مواعيدك: 11:00 ص مكالمة · تابع مع: زيتون");
   });
 });
