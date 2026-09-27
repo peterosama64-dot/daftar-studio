@@ -14,6 +14,9 @@ import { runRecurring } from "@/lib/recurring";
 import { parseItems } from "@/lib/quote";
 import { acceptQuoteFor, newToken } from "@/lib/share";
 import { removeFile } from "@/lib/files";
+import { whatsappLink } from "@/lib/contact";
+import { currencyShort } from "@/lib/data";
+import type { ReminderData } from "@/lib/remind";
 
 const done = () => revalidatePath("/app", "layout");
 const str = (f: FormData, k: string, max = 200) => String(f.get(k) ?? "").trim().slice(0, max);
@@ -398,4 +401,35 @@ export async function saveClientInfo(name: string, f: FormData) {
   const data = { phone: str(f, "phone", 40), email: str(f, "email", 120), notes: str(f, "notes", 2000) };
   await prisma.clientInfo.upsert({ where: { userId_name: { userId, name: n } }, create: { userId, name: n, ...data }, update: data });
   revalidatePath(`/app/clients/${encodeURIComponent(n)}`);
+}
+
+// ---------- payment reminder ----------
+/**
+ * What a payment reminder to one client needs: every job they still owe on, each with a live invoice link
+ * (made now if the invoice wasn't shared yet), plus their phone and the sender's name.
+ */
+export async function prepareReminder(client: string): Promise<ReminderData | null> {
+  const userId = await requireUser();
+  const name = client.trim().slice(0, 80);
+  if (!name) return null;
+  const owing = await prisma.task.findMany({ where: { userId, client: name, agreed: { gt: 0 } }, orderBy: { createdAt: "asc" } });
+  const tasks = owing.filter((t) => (t.agreed ?? 0) > (t.paid ?? 0));
+  if (!tasks.length) return null;
+  // Only fills a missing token, so a link the client already has keeps working.
+  await Promise.all(tasks.filter((t) => !t.shareToken).map((t) =>
+    prisma.task.updateMany({ where: { id: t.id, userId, shareToken: null }, data: { shareToken: newToken() } })));
+  const [fresh, user, info, cur] = await Promise.all([
+    prisma.task.findMany({ where: { id: { in: tasks.map((t) => t.id) }, userId }, select: { id: true, shareToken: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
+    prisma.clientInfo.findUnique({ where: { userId_name: { userId, name } }, select: { phone: true } }),
+    currencyShort(userId),
+  ]);
+  const token = new Map(fresh.map((t) => [t.id, t.shareToken]));
+  return {
+    client: name,
+    sender: user?.name ?? "",
+    cur: cur.short,
+    phone: info?.phone ? whatsappLink(info.phone) : null,
+    tasks: tasks.map((t) => ({ title: t.title, remaining: (t.agreed ?? 0) - (t.paid ?? 0), path: `/s/i/${token.get(t.id)}` })),
+  };
 }
