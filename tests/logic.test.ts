@@ -563,3 +563,28 @@ describe("weekly email", () => {
     expect(w.html).toContain('dir="rtl"');
   });
 });
+
+import { change, compareMonths } from "@/lib/compare";
+
+describe("month comparison", () => {
+  const inc = (client: string, amount: number, d: Date) => ({ kind: "income", name: "x", client, amount, date: d, startMonth: null, endMonth: null });
+  const job = (client: string, doneAt: Date, timeSpent = 0, agreed: number | null = null, createdAt = doneAt) => ({ client, status: "done", doneAt, timeSpent, agreed, createdAt });
+  it("compares this month, last month and the same month last year", () => {
+    const r = compareMonths([
+      inc("نون", 3000, new Date(2026, 8, 5)), inc("سكر", 1000, new Date(2026, 8, 9)),
+      inc("نون", 2000, new Date(2026, 7, 5)), inc("زيتون", 1500, new Date(2025, 8, 5)),
+      { kind: "subscription", name: "Adobe", client: "", amount: 500, date: null, startMonth: "2025-01", endMonth: null },
+    ], [job("سكر", new Date(2026, 8, 10), 7200, 1000), job("نون", new Date(2026, 8, 12), 3600, 2000, new Date(2026, 6, 1))], "2026-09");
+    expect(r.now).toMatchObject({ I: 4000, out: 500, net: 3500, done: 2, hours: 3, clients: 2, newClients: 1, top: { name: "نون", amount: 3000 } });
+    expect(r.now.rate).toBe(1000);
+    expect(r.prev).toMatchObject({ I: 2000, done: 0, clients: 1, newClients: 0, rate: null });
+    expect(r.lastYear).toMatchObject({ I: 1500, newClients: 1, top: { name: "زيتون" } });
+  });
+  it("computes change in percent", () => {
+    expect(change(150, 100)).toBe(50);
+    expect(change(50, 100)).toBe(-50);
+    expect(change(10, 0)).toBeNull();
+    expect(change(null, 5)).toBeNull();
+    expect(change(-50, -100)).toBe(50);
+  });
+});
