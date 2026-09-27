@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { CURRENCIES, PRIORITIES, SOURCES, STATUSES } from "@/lib/constants";
-import { monthKey, parseDay, isMonthKey, now } from "@/lib/dates";
+import { monthKey, parseDay, parseDayTime, isMonthKey, now } from "@/lib/dates";
 import { ParsedSchema } from "@/lib/parsed";
 import { runRecurring } from "@/lib/recurring";
 import { parseItems } from "@/lib/quote";
@@ -824,4 +824,35 @@ export async function unshareReviews() {
   const userId = await requireUser();
   await prisma.user.updateMany({ where: { id: userId }, data: { reviewsToken: null } });
   revalidatePath("/app/reviews");
+}
+
+// ---------- meetings ----------
+const meetingPath = () => { revalidatePath("/app/meetings"); revalidatePath("/app/calendar"); revalidatePath("/app"); };
+const meetingData = (f: FormData) => ({
+  title: str(f, "title", 200), client: str(f, "client", 80), place: str(f, "place", 300), notes: str(f, "notes", 2000),
+  at: parseDayTime(str(f, "day", 10), str(f, "time", 5)),
+});
+
+export async function addMeeting(f: FormData) {
+  const userId = await requireUser();
+  const { at, ...d } = meetingData(f);
+  if (!d.title || !at) return;
+  await prisma.meeting.create({ data: { ...d, at, userId } });
+  meetingPath();
+}
+
+/** Moving a meeting to another time clears its reminder, so the new time gets one too. */
+export async function updateMeeting(id: string, f: FormData) {
+  const userId = await requireUser();
+  const { at, ...d } = meetingData(f);
+  const m = await prisma.meeting.findFirst({ where: { id, userId }, select: { at: true } });
+  if (!m || !d.title || !at) return;
+  await prisma.meeting.updateMany({ where: { id, userId }, data: { ...d, at, ...(at.getTime() !== m.at.getTime() ? { remindedAt: null } : {}) } });
+  meetingPath();
+}
+
+export async function deleteMeeting(id: string) {
+  const userId = await requireUser();
+  await prisma.meeting.deleteMany({ where: { id, userId } });
+  meetingPath();
 }

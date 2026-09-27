@@ -4,6 +4,7 @@ import { Card } from "@/components/ui";
 
 const LINKS = [
   { href: "/app/calendar", title: "التقويم", desc: "كل مواعيد التسليم في الشهر" },
+  { href: "/app/meetings", title: "المواعيد", desc: "مكالمات واجتماعات بالساعة، وتنبيه قبلها بساعة" },
   { href: "/app/recurring", title: "شغل شهري", desc: "عملاء على باقة شهرية: المهمة بتتعمل لوحدها كل شهر" },
   { href: "/app/leads", title: "عملاء محتملين", desc: "اللي سأل ولسه ماتفقتوش: تابعه لحد ما يبقى شغل" },
   { href: "/app/quotes", title: "عروض الأسعار", desc: "عرض سعر للعميل، ولما يوافق يبقى شغلانة" },

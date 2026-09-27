@@ -2,27 +2,32 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { monthFrom, type SP } from "@/lib/data";
-import { AR_DAYS, dayKey, daysUntil, now, shortDate } from "@/lib/dates";
+import { AR_DAYS, clock, dayKey, daysUntil, now, shortDate } from "@/lib/dates";
 import { monthGrid, WEEK_DAYS } from "@/lib/calendar";
 import { PageHead } from "@/components/month";
 import { Card, Empty } from "@/components/ui";
 
 export const metadata = { title: "التقويم" };
 
-type T = { id: string; title: string; client: string; due: Date | null; status: string; priority: string };
+type T = { id: string; title: string; client: string; due: Date | null; status: string; priority: string; meeting?: boolean };
 
 export default async function Calendar({ searchParams }: { searchParams: SP }) {
   const uid = await requireUser();
   const month = await monthFrom(searchParams);
   const [y, m] = month.split("-").map(Number);
   const today = now();
-  const [tasks, undated] = await Promise.all([
+  const [tasks, undated, meetings] = await Promise.all([
     prisma.task.findMany({
       where: { userId: uid, due: { gte: new Date(y, m - 1, 1), lt: new Date(y, m, 1) } },
       select: { id: true, title: true, client: true, due: true, status: true, priority: true },
       orderBy: [{ due: "asc" }, { createdAt: "asc" }],
     }),
     prisma.task.count({ where: { userId: uid, due: null, status: { not: "done" } } }),
+    prisma.meeting.findMany({
+      where: { userId: uid, at: { gte: new Date(y, m - 1, 1), lt: new Date(y, m, 1) } },
+      select: { id: true, title: true, client: true, at: true },
+      orderBy: { at: "asc" },
+    }),
   ]);
   const byDay = new Map<string, T[]>();
   // Within a day: urgent first, then normal, then low; ties keep the order they were added.
@@ -30,12 +35,19 @@ export default async function Calendar({ searchParams }: { searchParams: SP }) {
   for (const t of [...tasks].sort((a, b) => a.due!.getTime() - b.due!.getTime() || (rank[a.priority] ?? 1) - (rank[b.priority] ?? 1))) {
     const k = dayKey(t.due!); byDay.set(k, [...(byDay.get(k) ?? []), t]);
   }
+  // Meetings go first in their day, by time.
+  for (const mt of [...meetings].reverse()) {
+    const k = dayKey(mt.at);
+    const item: T = { id: mt.id, title: `${clock(mt.at)} ${mt.title}`, client: mt.client, due: mt.at, status: mt.at < today ? "past" : "todo", priority: "normal", meeting: true };
+    byDay.set(k, [item, ...(byDay.get(k) ?? [])]);
+  }
   const tone = (t: T) =>
+    t.meeting ? (t.status === "past" ? "bg-paper text-muted" : "bg-wait-soft text-ink") :
     t.status === "done" ? "bg-paper text-muted line-through"
       : (daysUntil(t.due, today) ?? 0) < 0 ? "bg-risk-soft text-risk"
         : t.priority === "high" ? "bg-risk-soft text-ink" : "bg-cyan-soft text-ink";
   const chip = (t: T) => (
-    <Link key={t.id} href={`/app/tasks/${t.id}`} title={t.client ? `${t.title} · ${t.client}` : t.title}
+    <Link key={t.id} href={t.meeting ? "/app/meetings" : `/app/tasks/${t.id}`} title={t.client ? `${t.title} · ${t.client}` : t.title}
       className={`block truncate rounded-md px-1.5 py-0.5 text-[0.75rem] hover:outline hover:outline-1 hover:outline-cyan ${tone(t)}`}>{t.title}</Link>
   );
   const open = tasks.filter((t) => t.status !== "done").length;
@@ -69,7 +81,7 @@ export default async function Calendar({ searchParams }: { searchParams: SP }) {
 
       {/* Phone: agenda by day */}
       <div className="grid gap-3 sm:hidden">
-        {byDay.size ? [...byDay.entries()].map(([k, list]) => {
+        {byDay.size ? [...byDay.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([k, list]) => {
           const d = list[0].due!;
           const isToday = k === dayKey(today);
           return (
@@ -83,6 +95,7 @@ export default async function Calendar({ searchParams }: { searchParams: SP }) {
 
       <div className="flex flex-wrap gap-4 text-xs text-muted">
         <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-sm bg-cyan-soft" />ميعاد</span>
+        <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-sm bg-wait-soft" />مكالمة أو اجتماع</span>
         <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-sm bg-risk-soft" />مستعجل أو متأخر</span>
         <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-sm border border-rule bg-paper" />خلصت</span>
         {undated > 0 && <Link href="/app/tasks" className="text-cyan">{undated} {undated === 1 ? "مهمة" : "مهام"} من غير ميعاد ‹</Link>}

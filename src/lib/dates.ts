@@ -52,3 +52,20 @@ export function parseDay(s: string | null | undefined): Date | null {
   const dt = new Date(y, m - 1, d);
   return dt.getMonth() === m - 1 ? dt : null;
 }
+
+/** "2:30 م" / "10:00 ص" — 12-hour clock as people say it here. */
+export function clock(d: Date): string {
+  const h = d.getHours(), m = d.getMinutes();
+  return `${h % 12 || 12}:${pad(m)} ${h < 12 ? "ص" : "م"}`;
+}
+
+/** "HH:MM" (24h) for a time input. */
+export const timeKey = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+/** A local date ("YYYY-MM-DD") plus a time ("HH:MM") as one wall-clock Date; null when either is invalid. */
+export function parseDayTime(day: string | null | undefined, time: string | null | undefined): Date | null {
+  const d = parseDay(day);
+  const t = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(time ?? "");
+  if (!d || !t) return null;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), +t[1], +t[2]);
+}

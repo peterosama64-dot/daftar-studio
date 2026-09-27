@@ -1,4 +1,4 @@
-import { daysUntil } from "./dates";
+import { clock, daysUntil } from "./dates";
 
 export type AttnItem = { key: string; text: string; href: string; tone: "urgent" | "waiting" | "later"; days: number };
 
@@ -9,6 +9,8 @@ export type AttnInput = {
   reviews: { id: string; title: string; client: string; approvedAt: Date | null; lastDelivery: Date | null; lastClientRevision: Date | null }[];
   doneUnpaid: { id: string; title: string; remaining: number; doneAt: Date }[];
   overBudget: string[];
+  /** Meetings still ahead today. */
+  meetings?: { id: string; title: string; client: string; at: Date }[];
   fmt: (n: number) => string;
 };
 
@@ -22,6 +24,11 @@ const days = (n: number) => (n === 0 ? "النهارده" : n === 1 ? "من ام
  */
 export function attentionItems(i: AttnInput, max = 8): AttnItem[] {
   const out: AttnItem[] = [];
+  // Today's meetings lead the list: they happen at a set time whatever else is waiting.
+  for (const m of i.meetings ?? []) {
+    const soon = m.at.getTime() - i.today.getTime() <= 60 * 60_000;
+    out.push({ key: `meet-${m.id}`, text: `ميعاد الساعة ${clock(m.at)}: ${m.title}${m.client && !m.title.includes(m.client) ? ` مع ${m.client}` : ""}`, href: "/app/meetings", tone: soon ? "urgent" : "later", days: 1001 - (m.at.getHours() * 60 + m.at.getMinutes()) / 1440 });
+  }
   for (const r of i.reviews) {
     if (r.lastClientRevision && (!r.lastDelivery || r.lastClientRevision > r.lastDelivery)) {
       const n = ago(r.lastClientRevision, i.today);

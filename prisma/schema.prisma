@@ -40,6 +40,7 @@ model User {
   payInfo      String             @default("") // how to pay: InstaPay, wallet, bank account…
   fxRates      String             @default("{}") // JSON {"USD": 48.5}: 1 unit = this many of the main currency
   leads        Lead[]
+  meetings     Meeting[]
   budgets      String             @default("{}") // JSON {"print": 500}: monthly spending limit per expense category
   weeklyEmail  Boolean            @default(false) // Friday summary by email
   lastWeekly   String? // "YYYY-MM-DD" of the last weekly email, so a week is never sent twice
@@ -299,4 +300,23 @@ model Contract {
   acceptedBody String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+}
+
+// A call or meeting at a set time. The meetings cron pushes a reminder about an hour before, once
+// (remindedAt is claimed); changing the time clears it so the new time is reminded too.
+// `at` is wall-clock time in the studio's timezone, like every other date here.
+model Meeting {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String
+  client     String    @default("")
+  at         DateTime
+  place      String    @default("") // a meeting link or an address
+  notes      String    @default("")
+  remindedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, at])
+  @@index([at])
 }

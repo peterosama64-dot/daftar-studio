@@ -4,9 +4,9 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, btnClass, inputClass } from "./ui";
 
-type Counts = { tasks: number; entries: number; quotes: number; recurring: number; clients: number; templates: number };
+type Counts = { tasks: number; entries: number; quotes: number; recurring: number; clients: number; templates: number; meetings?: number };
 const summary = (c: Counts) =>
-  [[c.tasks, "مهمة"], [c.entries, "حركة فلوس"], [c.quotes, "عرض سعر"], [c.recurring, "باقة شهرية"], [c.clients, "عميل"], [c.templates, "قالب"]]
+  [[c.tasks, "مهمة"], [c.entries, "حركة فلوس"], [c.quotes, "عرض سعر"], [c.recurring, "باقة شهرية"], [c.clients, "عميل"], [c.templates, "قالب"], [c.meetings ?? 0, "ميعاد"]]
     .filter(([n]) => n).map(([n, l]) => `${n} ${l}`).join("، ") || "فاضية";
 
 /** Download everything as one file; restore it here or into a new account (replaces what's there). */
