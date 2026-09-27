@@ -68,3 +68,17 @@ export async function acceptPortalQuote(token: string, id: string) {
   }
   revalidatePath(`/s/c/${token}`, "layout");
 }
+
+/** The client accepts the contract by typing their name. Stores exactly the text they accepted. */
+export async function acceptContract(token: string, f: FormData) {
+  if (!isToken(token)) return;
+  const name = String(f.get("name") ?? "").trim().slice(0, 80);
+  if (name.length < 2 || f.get("agree") !== "on") return;
+  const c = await prisma.contract.findUnique({ where: { shareToken: token, task: { user: { suspendedAt: null } } }, select: { id: true, body: true, userId: true, task: { select: { id: true, title: true, client: true } } } });
+  if (!c) return;
+  const done = await prisma.contract.updateMany({ where: { id: c.id, acceptedAt: null, body: c.body }, data: { acceptedAt: new Date(), acceptedName: name, acceptedBody: c.body } });
+  if (done.count) {
+    await pushToUser(c.userId, { title: `${c.task.client || name} وافق على العقد`, body: `«${c.task.title}» — باسم ${name}`, url: `/app/tasks/${c.task.id}/contract`, tag: `daftar-contract-${c.id}` }).catch(() => {});
+  }
+  revalidatePath(`/s/k/${token}`);
+}

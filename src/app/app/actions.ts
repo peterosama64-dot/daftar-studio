@@ -22,6 +22,7 @@ import { CATEGORIES, pickCategory } from "@/lib/categories";
 import { mailConfigured, sendMail } from "@/lib/mail";
 import { buildWeekly } from "@/lib/weekly";
 import { weeklyFor } from "@/lib/weekly-data";
+import { draftContract } from "@/lib/contract";
 import type { ReminderData } from "@/lib/remind";
 
 const done = () => revalidatePath("/app", "layout");
@@ -748,4 +749,59 @@ export async function winLead(id: string) {
   }
   done();
   if (taskId) redirect(`/app/tasks/${taskId}`);
+}
+
+// ---------- contracts ----------
+const contractPath = (taskId: string) => revalidatePath(`/app/tasks/${taskId}/contract`);
+
+/** Draft the contract from the task (price, steps, payments, deadline, revisions) — once. */
+export async function createContract(taskId: string) {
+  const userId = await requireUser();
+  const t = await prisma.task.findFirst({
+    where: { id: taskId, userId },
+    include: { subtasks: { orderBy: [{ position: "asc" }, { createdAt: "asc" }] }, installments: { orderBy: [{ position: "asc" }, { id: "asc" }] }, contract: { select: { id: true } } },
+  });
+  if (!t || t.contract) return;
+  const [u, fx] = await Promise.all([prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true, bizPhone: true, bizAddress: true } }), loadFx(userId)]);
+  const body = draftContract({
+    owner: { name: u?.name ?? "", email: u?.email ?? "", phone: u?.bizPhone, address: u?.bizAddress },
+    client: t.client, title: t.title, steps: t.subtasks.map((s) => s.title), price: t.agreed, cur: fx.short(t.currency),
+    payments: t.installments.map((i) => ({ label: i.label, amount: i.amount, due: i.due })), due: t.due, revisions: t.revisionsAllowed, today: now(),
+  });
+  await prisma.contract.createMany({ data: [{ taskId, userId, body }], skipDuplicates: true });
+  contractPath(taskId);
+}
+
+/** Save edits — only while the client hasn't accepted (what they accepted can't change underneath them). */
+export async function saveContract(taskId: string, f: FormData) {
+  const userId = await requireUser();
+  const body = String(f.get("body") ?? "").slice(0, 20_000).trim();
+  if (!body) return;
+  await prisma.contract.updateMany({ where: { taskId, userId, acceptedAt: null }, data: { body } });
+  contractPath(taskId);
+}
+
+/** Start a new version after acceptance: the client will need to accept again. */
+export async function reopenContract(taskId: string) {
+  const userId = await requireUser();
+  await prisma.contract.updateMany({ where: { taskId, userId }, data: { acceptedAt: null, acceptedName: null, acceptedBody: null } });
+  contractPath(taskId);
+}
+
+export async function shareContract(taskId: string) {
+  const userId = await requireUser();
+  await prisma.contract.updateMany({ where: { taskId, userId, shareToken: null }, data: { shareToken: newToken() } });
+  contractPath(taskId);
+}
+
+export async function unshareContract(taskId: string) {
+  const userId = await requireUser();
+  await prisma.contract.updateMany({ where: { taskId, userId }, data: { shareToken: null } });
+  contractPath(taskId);
+}
+
+export async function deleteContract(taskId: string) {
+  const userId = await requireUser();
+  await prisma.contract.deleteMany({ where: { taskId, userId } });
+  contractPath(taskId);
 }

@@ -588,3 +588,28 @@ describe("month comparison", () => {
     expect(change(-50, -100)).toBe(50);
   });
 });
+
+import { draftContract } from "@/lib/contract";
+
+describe("contract draft", () => {
+  const base = { owner: { name: "استوديو بيتر", email: "p@x.com", phone: "0100" }, client: "كافيه نون", title: "هوية بصرية", steps: ["لوجو", "كروت"],
+    price: 10000, cur: "ج.م", payments: [{ label: "مقدم", amount: 5000, due: new Date(2026, 8, 30) }, { label: "عند التسليم", amount: 5000, due: null }],
+    due: new Date(2026, 9, 15), revisions: 3, today: new Date(2026, 8, 27) };
+  it("fills parties, scope, price, payments, deadline and revisions", () => {
+    const t = draftContract(base);
+    expect(t).toContain("الطرف الأول (المصمم): استوديو بيتر — 0100");
+    expect(t).toContain("الطرف الثاني (العميل): كافيه نون");
+    expect(t).toContain("   - كروت");
+    expect(t).toContain("مبلغ إجمالي قدره 10,000 ج.م");
+    expect(t).toContain("   - مقدم: 5,000 ج.م بتاريخ 30 سبتمبر 2026");
+    expect(t).toContain("عدد 3 تعديلات");
+    expect(t).toMatch(/^5\. الملكية الفكرية/m);
+  });
+  it("handles missing price, date and revisions", () => {
+    const t = draftContract({ ...base, price: null, payments: [], due: null, revisions: null, steps: [], client: "" });
+    expect(t).not.toContain("المقابل المالي");
+    expect(t).toContain("يُتفق على موعد التسليم كتابةً");
+    expect(t).toContain("الطرف الثاني (العميل): …………");
+    expect(t).toMatch(/^1\. موضوع الاتفاق: .*«هوية بصرية» لصالح الطرف الثاني\.$/m);
+  });
+});
