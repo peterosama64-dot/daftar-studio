@@ -98,6 +98,7 @@ export default async function Calendar({ searchParams }: { searchParams: SP }) {
         <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-sm bg-wait-soft" />مكالمة أو اجتماع</span>
         <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-sm bg-risk-soft" />مستعجل أو متأخر</span>
         <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-sm border border-rule bg-paper" />خلصت</span>
+        <Link href="/app/meetings#cal-h" className="text-cyan">اربطه بتقويم جوجل أو الآيفون ‹</Link>
         {undated > 0 && <Link href="/app/tasks" className="text-cyan">{undated} {undated === 1 ? "مهمة" : "مهام"} من غير ميعاد ‹</Link>}
       </div>
     </>

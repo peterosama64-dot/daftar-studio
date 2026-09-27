@@ -5,6 +5,7 @@ import { AR_DAYS, clock, dayKey, daysUntil, now, shortDate, timeKey } from "@/li
 import { placeLink, REMIND_MINUTES } from "@/lib/meetings";
 import { PageHead } from "@/components/month";
 import { Button, Card, Empty, Field, Pill, SectionHead, inputClass } from "@/components/ui";
+import { CalendarFeed } from "@/components/calendar-feed";
 import { addMeeting, deleteMeeting, updateMeeting } from "../actions";
 
 export const metadata = { title: "المواعيد" };
@@ -20,11 +21,12 @@ export default async function Meetings() {
   const uid = await requireUser();
   const today = now();
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const [upcoming, past, devices, clients] = await Promise.all([
+  const [upcoming, past, devices, clients, me] = await Promise.all([
     prisma.meeting.findMany({ where: { userId: uid, at: { gte: startOfToday } }, orderBy: { at: "asc" }, take: 200 }),
     prisma.meeting.findMany({ where: { userId: uid, at: { lt: startOfToday } }, orderBy: { at: "desc" }, take: 30 }),
     prisma.pushSubscription.count({ where: { userId: uid } }),
     prisma.clientInfo.findMany({ where: { userId: uid }, select: { name: true }, orderBy: { name: "asc" }, take: 300 }),
+    prisma.user.findUnique({ where: { id: uid }, select: { calendarToken: true } }),
   ]);
   const byDay = new Map<string, M[]>();
   for (const m of upcoming) byDay.set(dayKey(m.at), [...(byDay.get(dayKey(m.at)) ?? []), m]);
@@ -99,6 +101,7 @@ export default async function Meetings() {
           </form>
         </Card>
       </div>
+      <CalendarFeed path={me?.calendarToken ? `/s/cal/${me.calendarToken}` : null} />
       {past.length > 0 && (
         <Card className="p-5">
           <details>

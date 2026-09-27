@@ -11,6 +11,8 @@ import { runRecurring } from "@/lib/recurring";
 import { mailConfigured, sendMail } from "@/lib/mail";
 import { buildWeekly } from "@/lib/weekly";
 import { weeklyFor } from "@/lib/weekly-data";
+import { loadWaiting } from "@/lib/waiting-data";
+import { waitingDigest, waitingList } from "@/lib/waiting";
 
 export const maxDuration = 60;
 
@@ -60,7 +62,8 @@ export async function GET(req: Request) {
       where: { userId: u.id, at: { gte: today, lt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1) } },
       select: { title: true, client: true, at: true }, orderBy: { at: "asc" }, take: 8,
     });
-    const digest = buildDigest(tasks, today, owed ? { total: owed.total, clients: owed.clients.length, currency } : undefined, dues, follow, meets);
+    const waiting = waitingDigest(waitingList(await loadWaiting(u.id), today)).slice(0, 6);
+    const digest = buildDigest(tasks, today, owed ? { total: owed.total, clients: owed.clients.length, currency } : undefined, dues, follow, meets, waiting);
     if (!digest) { quiet++; continue; }
     if ((await pushToUser(u.id, { title: digest.title, body: digest.body, url: "/app/tasks" })).sent) sent++;
   }

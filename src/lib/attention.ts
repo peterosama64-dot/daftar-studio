@@ -6,9 +6,11 @@ export type AttnInput = {
   today: Date;
   duePayments: { id: string; taskId: string; label: string; title: string; amount: number; due: Date }[];
   followUps: { id: string; name: string; nextAt: Date }[];
-  reviews: { id: string; title: string; client: string; approvedAt: Date | null; lastDelivery: Date | null; lastClientRevision: Date | null }[];
+  reviews: { id: string; title: string; client: string; approvedAt: Date | null; lastDelivery: Date | null; lastClientRevision: Date | null; nudgedAt?: Date | null }[];
   doneUnpaid: { id: string; title: string; remaining: number; doneAt: Date }[];
   overBudget: string[];
+  /** Quotes and contracts the client hasn't answered for WAIT_DAYS or more (delivered work is in `reviews`). */
+  waiting?: { key: string; label: string; title: string; client: string; days: number }[];
   /** Meetings still ahead today. */
   meetings?: { id: string; title: string; client: string; at: Date }[];
   fmt: (n: number) => string;
@@ -34,8 +36,8 @@ export function attentionItems(i: AttnInput, max = 8): AttnItem[] {
       const n = ago(r.lastClientRevision, i.today);
       out.push({ key: `rev-${r.id}`, text: `${r.client || "العميل"} طلب تعديل في «${r.title}» ${days(n)}`, href: `/app/tasks/${r.id}`, tone: "urgent", days: n + 100 });
     } else if (!r.approvedAt && r.lastDelivery) {
-      const n = ago(r.lastDelivery, i.today);
-      if (n >= 3) out.push({ key: `wait-${r.id}`, text: `مستني رد ${r.client || "العميل"} على «${r.title}» ${days(n)}`, href: `/app/tasks/${r.id}`, tone: "later", days: n });
+      const n = ago(r.nudgedAt && r.nudgedAt > r.lastDelivery ? r.nudgedAt : r.lastDelivery, i.today);
+      if (n >= 3) out.push({ key: `wait-${r.id}`, text: `مستني رد ${r.client || "العميل"} على «${r.title}» ${days(n)}`, href: "/app/waiting", tone: "later", days: n });
     }
   }
   for (const p of i.duePayments) {
@@ -49,6 +51,9 @@ export function attentionItems(i: AttnInput, max = 8): AttnItem[] {
   for (const t of i.doneUnpaid) {
     const n = ago(t.doneAt, i.today);
     if (n >= 7) out.push({ key: `owed-${t.id}`, text: `خلصت «${t.title}» ${days(n)} ولسه فاضل ${i.fmt(t.remaining)}`, href: `/app/tasks/${t.id}`, tone: "waiting", days: n + 10 });
+  }
+  for (const w of i.waiting ?? []) {
+    out.push({ key: `waitc-${w.key}`, text: `مستني رد ${w.client || "العميل"} على ${w.label} «${w.title}» ${days(w.days)}`, href: "/app/waiting", tone: "later", days: w.days });
   }
   for (const c of i.overBudget) out.push({ key: `budget-${c}`, text: `عدّيت ميزانية «${c}» الشهر ده`, href: "/app/money", tone: "urgent", days: 30 });
   return out.sort((a, b) => b.days - a.days).slice(0, max);
