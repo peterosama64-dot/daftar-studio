@@ -322,3 +322,27 @@ describe("focus mode", () => {
     expect(nextPhase({ ...w, phase: "rest" }, 1000)).toBeNull();
   });
 });
+
+import { reminderText, whatsappMessageLink } from "@/lib/remind";
+import { NO_CLIENT } from "@/lib/owed";
+
+describe("payment reminder", () => {
+  const d = { client: "كافيه نون", sender: "استوديو بيتر", cur: "ج.م", phone: "https://wa.me/201001234567",
+    tasks: [{ title: "لوجو", remaining: 2000, path: "/s/i/abc" }, { title: "منيو", remaining: 1500, path: "/s/i/def" }] };
+  it("lists each job with its invoice link and the total", () => {
+    const t = reminderText(d, "https://x.app");
+    expect(t).toContain("أهلاً يا كافيه نون");
+    expect(t).toContain("• لوجو: 2,000 ج.م");
+    expect(t).toContain("https://x.app/s/i/def");
+    expect(t).toContain("الإجمالي: 3,500 ج.م");
+    expect(t.trim().endsWith("استوديو بيتر")).toBe(true);
+  });
+  it("skips the total line for a single job", () => {
+    expect(reminderText({ ...d, tasks: [d.tasks[0]] }, "")).not.toContain("الإجمالي");
+  });
+  it("encodes the message into the wa.me link, with or without a phone", () => {
+    expect(whatsappMessageLink(d.phone, "أهلاً & شكراً")).toBe("https://wa.me/201001234567?text=" + encodeURIComponent("أهلاً & شكراً"));
+    expect(whatsappMessageLink(null, "x")).toBe("https://wa.me/?text=x");
+    expect(NO_CLIENT).toBe("من غير اسم عميل");
+  });
+});

@@ -4,7 +4,8 @@ import { PageHead } from "@/components/month";
 import Link from "next/link";
 import { Button, Card, Empty, btnClass, inputClass } from "@/components/ui";
 import { prisma } from "@/lib/db";
-import { owedByClient } from "@/lib/owed";
+import { NO_CLIENT, owedByClient } from "@/lib/owed";
+import { RemindButton } from "@/components/remind-button";
 import { loadMonth, monthFrom, type SP } from "@/lib/data";
 import { monthTotals, fmt } from "@/lib/money";
 import { dayKey, shiftMonth, AR_MONTHS, shortDate, now } from "@/lib/dates";
@@ -64,6 +65,7 @@ export default async function Money({ searchParams }: { searchParams: SP }) {
                     </li>
                   ))}
                 </ul>
+                {c.name !== NO_CLIENT && <div className="mt-2"><RemindButton client={c.name} /></div>}
               </li>
             ))}
           </ul>
