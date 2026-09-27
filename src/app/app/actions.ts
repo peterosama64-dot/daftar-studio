@@ -18,6 +18,7 @@ import { whatsappLink } from "@/lib/contact";
 import { loadFx } from "@/lib/data";
 import { pickCurrency, type Fx } from "@/lib/fx";
 import { LEAD_STATUSES } from "@/lib/leads";
+import { CATEGORIES, pickCategory } from "@/lib/categories";
 import type { ReminderData } from "@/lib/remind";
 
 const done = () => revalidatePath("/app", "layout");
@@ -133,11 +134,29 @@ export async function addEntry(f: FormData) {
   const month = str(f, "month", 7);
   const fx = await loadFx(userId);
   const money = incomeFrom(fx, amount, pickCurrency(fx, str(f, "currency", 3)));
+  const category = kind === "income" ? null : pickCategory(str(f, "category", 20), kind);
   await prisma.entry.create({
     data: kind === "subscription"
-      ? { userId, kind, name, ...money, startMonth: isMonthKey(month) ? month : monthKey(now()) }
-      : { userId, kind, name, ...money, client: str(f, "client", 80), date: parseDay(str(f, "date", 10)) ?? now() },
+      ? { userId, kind, name, ...money, category, startMonth: isMonthKey(month) ? month : monthKey(now()) }
+      : { userId, kind, name, ...money, category, client: str(f, "client", 80), date: parseDay(str(f, "date", 10)) ?? now() },
   });
+  done();
+}
+
+/** Put an expense or subscription under another category. */
+export async function setEntryCategory(id: string, f: FormData) {
+  const userId = await requireUser();
+  const raw = str(f, "category", 20);
+  await prisma.entry.updateMany({ where: { id, userId, kind: { in: ["expense", "subscription"] } }, data: { category: CATEGORIES.some((c) => c.key === raw) ? raw : null } });
+  done();
+}
+
+/** Monthly spending limits per category (empty = no limit). */
+export async function setBudgets(f: FormData) {
+  const userId = await requireUser();
+  const out: Record<string, number> = {};
+  for (const c of CATEGORIES) { const v = num(f, `budget_${c.key}`); if (v && v > 0 && v < 1e9) out[c.key] = v; }
+  await prisma.user.update({ where: { id: userId }, data: { budgets: JSON.stringify(out) } });
   done();
 }
 

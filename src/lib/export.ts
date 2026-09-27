@@ -1,8 +1,9 @@
 import { dayKey } from "./dates";
 import type { Sheet } from "./xlsx";
+import { categoryLabel } from "./categories";
 
 type T = { title: string; client: string; status: string; priority: string; due: Date | null; doneAt: Date | null; agreed: number | null; paid: number | null; notes: string; createdAt: Date; currency?: string | null };
-type E = { kind: string; name: string; client: string; amount: number; date: Date | null; startMonth: string | null; endMonth: string | null; origAmount?: number | null; origCurrency?: string | null };
+type E = { kind: string; name: string; client: string; amount: number; date: Date | null; startMonth: string | null; endMonth: string | null; origAmount?: number | null; origCurrency?: string | null; category?: string | null };
 
 const STATUS: Record<string, string> = { todo: "لسه", doing: "شغال", done: "خلصت" };
 const PRIORITY: Record<string, string> = { high: "مستعجل", normal: "عادي", low: "مش مستعجل" };
@@ -24,8 +25,8 @@ export function exportSheets(tasks: T[], entries: E[], currency: string): Sheet[
     {
       name: "الدخل والمصاريف",
       rows: [
-        ["النوع", "عن إيه", "العميل", `المبلغ (${currency})`, "التاريخ", "المبلغ الأصلي"],
-        ...money.map((e) => [e.kind === "income" ? "دخل" : "مصروف", e.name, e.client, e.kind === "income" ? e.amount : -e.amount, day(e.date), e.origAmount && e.origCurrency ? `${e.origAmount} ${e.origCurrency}` : ""]),
+        ["النوع", "عن إيه", "العميل", `المبلغ (${currency})`, "التاريخ", "المبلغ الأصلي", "التصنيف"],
+        ...money.map((e) => [e.kind === "income" ? "دخل" : "مصروف", e.name, e.client, e.kind === "income" ? e.amount : -e.amount, day(e.date), e.origAmount && e.origCurrency ? `${e.origAmount} ${e.origCurrency}` : "", e.kind === "income" ? "" : categoryLabel(e.category)]),
       ],
     },
     {

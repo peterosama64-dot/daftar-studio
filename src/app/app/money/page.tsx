@@ -6,24 +6,38 @@ import { Button, Card, Empty, btnClass, inputClass } from "@/components/ui";
 import { prisma } from "@/lib/db";
 import { NO_CLIENT, owedByClient } from "@/lib/owed";
 import { loadFx } from "@/lib/data";
+import { CATEGORIES, parseBudgets, spendByCategory } from "@/lib/categories";
+import { CategorySelect } from "@/components/category-select";
 import { RemindButton } from "@/components/remind-button";
 import { ReceiptScan } from "@/components/receipt-scan";
 import { aiEnabled } from "@/lib/ai";
 import { loadMonth, monthFrom, type SP } from "@/lib/data";
 import { monthTotals, fmt } from "@/lib/money";
 import { dayKey, shiftMonth, AR_MONTHS, shortDate, now } from "@/lib/dates";
-import { addEntry, collectRemaining, deleteEntry, stopSubscription } from "../actions";
+import { addEntry, collectRemaining, deleteEntry, setBudgets, setEntryCategory, stopSubscription } from "../actions";
 
 export const metadata = { title: "الفلوس" };
 
 export default async function Money({ searchParams }: { searchParams: SP }) {
   const uid = await requireUser();
   const month = await monthFrom(searchParams);
-  const [{ entries, totals: t, cur }, fx, owedTasks] = await Promise.all([
+  const [{ entries, totals: t, cur }, fx, owedTasks, budgetRow] = await Promise.all([
     loadMonth(month, uid),
     loadFx(uid),
     prisma.task.findMany({ where: { userId: uid, agreed: { gt: 0 } }, select: { id: true, title: true, client: true, agreed: true, paid: true, currency: true } }),
+    prisma.user.findUnique({ where: { id: uid }, select: { budgets: true } }),
   ]);
+  const budgets = parseBudgets(budgetRow?.budgets);
+  const spend = spendByCategory(entries, month, budgets);
+  const overs = spend.filter((r) => r.over);
+  const catSelect = (e: { id: string; category: string | null; name: string }) =>
+    <CategorySelect action={setEntryCategory.bind(null, e.id)} value={e.category} label={`تصنيف ${e.name}`} />;
+  const catPick = (def = "") => (
+    <select name="category" defaultValue={def} aria-label="التصنيف" className={inputClass}>
+      <option value="">التصنيف</option>
+      {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+    </select>
+  );
   const owed = owedByClient(owedTasks, fx.toBase);
   // Entered in another currency: show what was typed next to the date.
   const sub = (e: { date: Date | null; origAmount: number | null; origCurrency: string | null }) =>
@@ -107,22 +121,24 @@ export default async function Money({ searchParams }: { searchParams: SP }) {
           <div>
             {head("الاشتراكات الشهرية", t.S)}
             {t.subs.length ? <ul>{t.subs.map((e) => row(e.id, e.name, ["كل شهر", sub({ date: null, origAmount: e.origAmount, origCurrency: e.origCurrency })].filter(Boolean).join(" · "), e.amount, "−",
-              <form action={stopSubscription.bind(null, e.id, shiftMonth(month, -1))}><button className="text-xs text-muted hover:text-ink">وقّفته</button></form>))}</ul>
+              <>{catSelect(e)}<form action={stopSubscription.bind(null, e.id, shiftMonth(month, -1))}><button className="text-xs text-muted hover:text-ink">وقّفته</button></form></>))}</ul>
               : <div className="py-3"><Empty>مفيش اشتراكات شغالة.</Empty></div>}
-            <form action={addEntry} className="mt-3 grid gap-2 sm:grid-cols-[2fr_1fr_auto]">
+            <form action={addEntry} className="mt-3 grid gap-2 sm:grid-cols-[2fr_1fr_1fr_auto]">
               <input type="hidden" name="kind" value="subscription" /><input type="hidden" name="month" value={month} />
               <input name="name" required placeholder="Adobe, Figma, Envato…" className={inputClass} aria-label="اسم الاشتراك" />
               {amountIn("المبلغ الشهري", "في الشهر")}
+              {catPick("software")}
               <Button small>ضيف</Button>
             </form>
           </div>
           <div>
             {head("مصاريف تانية", t.X)}
-            {t.expenses.length ? <ul>{t.expenses.map((e) => row(e.id, e.name, sub(e), e.amount, "−"))}</ul> : <div className="py-3"><Empty>مفيش مصاريف.</Empty></div>}
-            <form action={addEntry} className="mt-3 grid gap-2 sm:grid-cols-[2fr_1fr_1fr_auto]">
+            {t.expenses.length ? <ul>{t.expenses.map((e) => row(e.id, e.name, sub(e), e.amount, "−", catSelect(e)))}</ul> : <div className="py-3"><Empty>مفيش مصاريف.</Empty></div>}
+            <form action={addEntry} className="mt-3 grid gap-2 sm:grid-cols-[2fr_1fr_1fr_1fr_auto]">
               <input type="hidden" name="kind" value="expense" />
               <input name="name" required placeholder="خطوط، ستوك، طباعة…" className={inputClass} aria-label="المصروف" />
               {amountIn("المبلغ")}
+              {catPick()}
               <input name="date" type="date" defaultValue={defaultDate} className={inputClass} aria-label="التاريخ" />
               <Button small>ضيف</Button>
             </form>
@@ -130,6 +146,42 @@ export default async function Money({ searchParams }: { searchParams: SP }) {
           </div>
         </Card>
       </div>
+      <Card className="p-5" aria-labelledby="spend-h">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2 border-b-2 border-ink pb-2">
+          <h2 id="spend-h" className="text-lg font-bold">الصرف حسب البند</h2>
+          {overs.length > 0 && <span className="text-sm font-semibold text-risk">عدّيت الميزانية في {overs.map((r) => r.label).join("، ")}</span>}
+        </div>
+        {spend.length ? (
+          <ul className="grid gap-3">
+            {spend.map((r) => (
+              <li key={r.key ?? "none"} className="grid gap-1">
+                <div className="flex flex-wrap items-baseline gap-2 text-sm">
+                  <span className="min-w-0 flex-1 font-medium">{r.label}</span>
+                  <span className={`num ${r.over ? "font-semibold text-risk" : ""}`}>{fmt(r.spent)}</span>
+                  {r.budget !== null && <span className="num text-muted">من {fmt(r.budget)}</span>}
+                </div>
+                {r.budget !== null && (
+                  <div className="h-2 overflow-hidden rounded bg-paper" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, r.pct ?? 0)} aria-label={`${r.label} من الميزانية`}>
+                    <div className={`h-full rounded ${r.over ? "bg-risk" : (r.pct ?? 0) >= 80 ? "bg-wait" : "bg-ink2"}`} style={{ width: `${Math.min(100, r.pct ?? 0)}%` }} />
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : <Empty>مفيش صرف الشهر ده.</Empty>}
+        <details className="mt-4 text-sm">
+          <summary className="cursor-pointer text-cyan">حدد ميزانية شهرية لكل بند</summary>
+          <form action={setBudgets} className="mt-3 grid gap-2 sm:grid-cols-2">
+            {CATEGORIES.map((c) => (
+              <label key={c.key} className="flex items-center gap-2">
+                <span className="min-w-0 flex-1">{c.label}</span>
+                <input name={`budget_${c.key}`} inputMode="decimal" defaultValue={budgets[c.key] ?? ""} placeholder="من غير حد" aria-label={`ميزانية ${c.label}`} className={`${inputClass} num w-32 text-left`} />
+              </label>
+            ))}
+            <Button small className="justify-self-start">احفظ الميزانية</Button>
+          </form>
+        </details>
+      </Card>
       <Card className="p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-bold">آخر ٦ شهور</h2>

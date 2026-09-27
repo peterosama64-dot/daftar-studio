@@ -5,6 +5,7 @@ import { z } from "zod";
 import { dayKey, AR_DAYS, now } from "./dates";
 import { ParsedSchema, type Parsed } from "./parsed";
 import { heuristicParse } from "./heuristic";
+import { CATEGORY_KEYS } from "./categories";
 
 const CLAUDE_MODEL = "claude-opus-5";
 // "latest" aliases so a retired Gemini version never breaks the app; override the first with GEMINI_MODEL.
@@ -140,6 +141,7 @@ export const ReceiptSchema = z.object({
   amount: z.number().describe("the final total paid, as a plain number"),
   currency: z.string().describe("ISO code of the total's currency, e.g. EGP, SAR, USD"),
   date: z.string().describe("YYYY-MM-DD from the receipt, or empty"),
+  category: z.enum(CATEGORY_KEYS as [string, ...string[]]).describe("software=apps/subscriptions, assets=fonts/stock/mockups, print=printing/materials, gear=devices/equipment, net=internet/phone, transport=taxi/fuel/transport, ads=advertising, other=anything else").optional(),
 });
 export type Receipt = z.infer<typeof ReceiptSchema>;
 
