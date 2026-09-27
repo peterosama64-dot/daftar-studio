@@ -7,7 +7,7 @@ import { dayKey } from "@/lib/dates";
 import { fmt } from "@/lib/money";
 import { SOURCE_LABEL, type Source } from "@/lib/constants";
 import { Button, Card, Field, btnClass, inputClass } from "@/components/ui";
-import { updateTask, deleteTaskAndReturn, startTimer, stopTimer, stopTimerAt } from "../../actions";
+import { updateTask, deleteTaskAndReturn, startTimer, stopTimer, stopTimerAt, saveTaskAsTemplate } from "../../actions";
 import { FocusCard } from "@/components/focus-card";
 import { TimerCard } from "@/components/timer-card";
 import { DeliveryCard } from "@/components/delivery-card";
@@ -64,9 +64,14 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
             {t.agreed ? <Link href={`/app/tasks/${t.id}/invoice`} className={btnClass("secondary", true)}>اعمل فاتورة</Link> : null}
           </div>
         </form>
-        <form action={deleteTaskAndReturn.bind(null, t.id)}>
-          <button className="text-sm font-medium text-risk">امسح المهمة</button>
-        </form>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <form action={deleteTaskAndReturn.bind(null, t.id)}>
+            <button className="text-sm font-medium text-risk">امسح المهمة</button>
+          </form>
+          <form action={saveTaskAsTemplate.bind(null, t.id)}>
+            <button className="text-sm font-medium text-cyan">احفظها كقالب</button>
+          </form>
+        </div>
       </Card>
       <InstallmentsCard task={t} cur={cur.short} />
       <ChecklistCard taskId={t.id} />

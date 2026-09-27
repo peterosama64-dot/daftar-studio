@@ -6,6 +6,7 @@ const LINKS = [
   { href: "/app/calendar", title: "التقويم", desc: "كل مواعيد التسليم في الشهر" },
   { href: "/app/recurring", title: "شغل شهري", desc: "عملاء على باقة شهرية: المهمة بتتعمل لوحدها كل شهر" },
   { href: "/app/quotes", title: "عروض الأسعار", desc: "عرض سعر للعميل، ولما يوافق يبقى شغلانة" },
+  { href: "/app/templates", title: "قوالب الشغل", desc: "الشغل اللي بيتكرر: سعره وخطواته جاهزين" },
   { href: "/app/inbox", title: "الرسايل", desc: "طلّع الشغل من شات العملاء" },
   { href: "/app/report", title: "تقرير الشهر", desc: "خلصت إيه، ولسه إيه، وصافي ربحك" },
   { href: "/app/clients", title: "العملاء", desc: "مين شغال معاك ومين لسه عليه فلوس" },

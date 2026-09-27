@@ -515,3 +515,73 @@ export async function unsharePortal(client: string) {
   await prisma.clientInfo.updateMany({ where: { userId, name: client.trim().slice(0, 80) }, data: { portalToken: null } });
   done();
 }
+
+// ---------- task templates ----------
+const templateSteps = (raw: string) => raw.split("\n").map((x) => x.trim().slice(0, 200)).filter(Boolean).slice(0, 30);
+const templateData = (f: FormData) => {
+  const days = num(f, "days");
+  return {
+    name: str(f, "name", 200),
+    amount: num(f, "amount"),
+    days: days !== null && days <= 365 ? Math.round(days) : null,
+    steps: templateSteps(str(f, "steps", 6000)).join("\n"),
+    notes: str(f, "notes", 2000),
+  };
+};
+
+export async function addTemplate(f: FormData) {
+  const userId = await requireUser();
+  const d = templateData(f);
+  if (!d.name) return;
+  await prisma.taskTemplate.create({ data: { userId, ...d } });
+  done();
+}
+
+export async function updateTemplate(id: string, f: FormData) {
+  const userId = await requireUser();
+  const d = templateData(f);
+  if (!d.name) return;
+  await prisma.taskTemplate.updateMany({ where: { id, userId }, data: d });
+  done();
+}
+
+export async function deleteTemplate(id: string) {
+  const userId = await requireUser();
+  await prisma.taskTemplate.deleteMany({ where: { id, userId } });
+  done();
+}
+
+/** Keeps a task's title, price, steps, notes and delivery time as a template for next time. */
+export async function saveTaskAsTemplate(taskId: string) {
+  const userId = await requireUser();
+  const t = await prisma.task.findFirst({ where: { id: taskId, userId }, include: { subtasks: { orderBy: [{ position: "asc" }, { createdAt: "asc" }] } } });
+  if (!t) return;
+  const days = t.due ? Math.max(1, Math.round((t.due.getTime() - t.createdAt.getTime()) / 86_400_000)) : null;
+  await prisma.taskTemplate.create({
+    data: { userId, name: t.title, amount: t.agreed, days: days && days <= 365 ? days : null, steps: t.subtasks.map((s) => s.title).join("\n"), notes: t.notes.slice(0, 2000) },
+  });
+  done();
+  redirect("/app/templates?saved=1");
+}
+
+/** Starts a task from a template: its price, checklist and due date (template days from today). */
+export async function startFromTemplate(id: string, f: FormData) {
+  const userId = await requireUser();
+  const tpl = await prisma.taskTemplate.findFirst({ where: { id, userId } });
+  if (!tpl) return;
+  const today = now();
+  const task = await prisma.task.create({
+    data: {
+      userId,
+      title: str(f, "title") || tpl.name,
+      client: str(f, "client", 80),
+      agreed: tpl.amount,
+      due: tpl.days ? new Date(today.getFullYear(), today.getMonth(), today.getDate() + tpl.days) : null,
+      notes: tpl.notes,
+      source: "manual",
+      subtasks: { create: templateSteps(tpl.steps).map((title, i) => ({ userId, title, position: i })) },
+    },
+  });
+  done();
+  redirect(`/app/tasks/${task.id}`);
+}
