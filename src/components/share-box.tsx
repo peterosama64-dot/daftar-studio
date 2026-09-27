@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "./ui";
 
 /** The client link for a quote or invoice: make it, copy or share it, or turn it off. */
-export function ShareBox({ path, make, revoke, what }: { path: string | null; make: () => Promise<void>; revoke: () => Promise<void>; what: string }) {
+export function ShareBox({ path, make, revoke, what, label = "لينك للعميل" }: { path: string | null; make: () => Promise<void>; revoke: () => Promise<void>; what: string; label?: string }) {
   const [copied, setCopied] = useState(false);
   const url = path && typeof window !== "undefined" ? `${location.origin}${path}` : path;
   async function copy() {
@@ -17,7 +17,7 @@ export function ShareBox({ path, make, revoke, what }: { path: string | null; ma
   if (!path) {
     return (
       <form action={make} className="print:hidden">
-        <Button kind="secondary" small>لينك للعميل</Button>
+        <Button kind="secondary" small>{label}</Button>
       </form>
     );
   }

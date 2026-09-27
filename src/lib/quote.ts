@@ -1,4 +1,4 @@
-import { monthKey } from "./dates";
+import { monthKey, now } from "./dates";
 
 export type QuoteItem = { desc: string; amount: number };
 
@@ -27,6 +27,10 @@ export const quoteNumber = (q: { id: string; createdAt: Date }) =>
 
 export const validUntil = (createdAt: Date, days: number) =>
   new Date(createdAt.getFullYear(), createdAt.getMonth(), createdAt.getDate() + days);
+
+/** Past its last valid day (the whole of that day still counts). */
+export const quoteExpired = (createdAt: Date, days: number, today = now()) =>
+  validUntil(createdAt, days) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
 /** The task notes that carry the quote's breakdown once the client accepts. */
 export const quoteNotes = (no: string, items: QuoteItem[], deliveryDays: number | null, notes: string) =>

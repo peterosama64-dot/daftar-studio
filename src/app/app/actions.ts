@@ -498,3 +498,20 @@ export async function deleteInstallment(id: string) {
   await prisma.installment.deleteMany({ where: { id, userId, paidAt: null } });
   done();
 }
+
+// ---------- client portal ----------
+/** Turns on the client's portal link (one link for all their quotes, invoices and deliveries). */
+export async function sharePortal(client: string) {
+  const userId = await requireUser();
+  const name = client.trim().slice(0, 80);
+  if (!name) return;
+  await prisma.clientInfo.upsert({ where: { userId_name: { userId, name } }, create: { userId, name, portalToken: newToken() }, update: {} });
+  await prisma.clientInfo.updateMany({ where: { userId, name, portalToken: null }, data: { portalToken: newToken() } });
+  done();
+}
+
+export async function unsharePortal(client: string) {
+  const userId = await requireUser();
+  await prisma.clientInfo.updateMany({ where: { userId, name: client.trim().slice(0, 80) }, data: { portalToken: null } });
+  done();
+}

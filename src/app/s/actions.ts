@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { isToken, acceptQuoteFor } from "@/lib/share";
 import { pushToUser } from "@/lib/push";
+import { portalFor } from "@/lib/portal";
+import { quoteExpired } from "@/lib/quote";
 
 /** The client accepts from the public link. Only a live link on a draft quote can do this. */
 export async function acceptSharedQuote(token: string) {
@@ -47,4 +49,22 @@ export async function requestRevision(token: string, f: FormData) {
   ]);
   await pushToUser(t.userId, { title: `${t.client || "العميل"} طلب تعديل`, body: `«${t.title}»: ${note.slice(0, 120)}`, url: `/app/tasks/${t.id}`, tag: `daftar-review-${t.id}` }).catch(() => {});
   revalidatePath(`/s/r/${token}`);
+}
+
+/** The client accepts a quote from their portal. Only a quote of that owner, for that client. */
+export async function acceptPortalQuote(token: string, id: string) {
+  const p = await portalFor(token);
+  if (!p) return;
+  const q = await prisma.quote.findFirst({ where: { id, userId: p.userId, client: p.name }, select: { id: true, title: true, status: true, createdAt: true, validDays: true } });
+  if (!q || (q.status !== "accepted" && quoteExpired(q.createdAt, q.validDays))) return;
+  const r = await acceptQuoteFor(p.userId, q.id);
+  if (r?.fresh) {
+    await pushToUser(p.userId, {
+      title: `${p.name} وافق على عرض السعر`,
+      body: `«${q.title}» اتحوّل لمهمة في الدفتر.`,
+      url: r.taskId ? `/app/tasks/${r.taskId}` : "/app/quotes",
+      tag: `daftar-quote-${q.id}`,
+    }).catch(() => {});
+  }
+  revalidatePath(`/s/c/${token}`, "layout");
 }

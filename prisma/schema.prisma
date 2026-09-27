@@ -191,13 +191,14 @@ model Subtask {
 
 // Contact details and notes for a client. Clients are still identified by the name used on tasks/money.
 model ClientInfo {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name   String
-  phone  String @default("")
-  email  String @default("")
-  notes  String @default("")
+  id          String  @id @default(cuid())
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  phone       String  @default("")
+  email       String  @default("")
+  notes       String  @default("")
+  portalToken String? @unique // one link where the client sees all their quotes, invoices and deliveries
 
   @@unique([userId, name])
 }
