@@ -108,6 +108,8 @@ export async function collectRemaining(id: string) {
     const claimed = await tx.task.updateMany({ where: { id, userId, paid: t.paid }, data: { paid: t.agreed } });
     if (!claimed.count) return;
     await tx.entry.create({ data: { userId, kind: "income", name: t.title.slice(0, 120), client: t.client, amount: remaining, date: now() } });
+    // Whatever payments were still planned are covered by this one.
+    await tx.installment.updateMany({ where: { taskId: id, userId, paidAt: null }, data: { paidAt: now() } });
   });
   done();
 }
@@ -432,4 +434,67 @@ export async function prepareReminder(client: string): Promise<ReminderData | nu
     phone: info?.phone ? whatsappLink(info.phone) : null,
     tasks: tasks.map((t) => ({ title: t.title, remaining: (t.agreed ?? 0) - (t.paid ?? 0), path: `/s/i/${token.get(t.id)}` })),
   };
+}
+
+// ---------- installments ----------
+/**
+ * Sets the planned payments of a task from the form (label/amount/due rows). Payments already marked paid
+ * stay as they are; the unpaid ones are replaced. With no agreed price yet, the total becomes the price.
+ */
+export async function saveInstallments(taskId: string, f: FormData) {
+  const userId = await requireUser();
+  const task = await prisma.task.findFirst({ where: { id: taskId, userId }, select: { id: true, agreed: true } });
+  if (!task) return;
+  const labels = f.getAll("label").map((v) => String(v).trim().slice(0, 60));
+  const amounts = f.getAll("amount").map((v) => Number(String(v).replace(/[,٬\s]/g, "")));
+  const dues = f.getAll("due").map((v) => parseDay(String(v)));
+  const rows = labels.flatMap((label, i) => {
+    const amount = amounts[i];
+    return Number.isFinite(amount) && amount > 0 ? [{ label: label || `دفعة ${i + 1}`, amount, due: dues[i] ?? null }] : [];
+  }).slice(0, 12);
+  await prisma.$transaction(async (tx) => {
+    const paid = await tx.installment.findMany({ where: { taskId, userId, paidAt: { not: null } }, select: { amount: true } });
+    await tx.installment.deleteMany({ where: { taskId, userId, paidAt: null } });
+    await tx.installment.createMany({ data: rows.map((r, i) => ({ ...r, taskId, userId, position: paid.length + i })) });
+    if (!task.agreed && rows.length) {
+      await tx.task.updateMany({ where: { id: taskId, userId }, data: { agreed: [...paid, ...rows].reduce((s, x) => s + x.amount, 0) } });
+    }
+  });
+  done();
+}
+
+/** Marks a payment received: adds it to what the task has been paid and records it as income, once. */
+export async function payInstallment(id: string) {
+  const userId = await requireUser();
+  const x = await prisma.installment.findFirst({ where: { id, userId }, include: { task: { select: { title: true, client: true } } } });
+  if (!x || x.paidAt) return;
+  await prisma.$transaction(async (tx) => {
+    const claimed = await tx.installment.updateMany({ where: { id, userId, paidAt: null }, data: { paidAt: now() } });
+    if (!claimed.count) return;
+    const e = await tx.entry.create({ data: { userId, kind: "income", name: `${x.task.title} — ${x.label}`.slice(0, 120), client: x.task.client, amount: x.amount, date: now() } });
+    await tx.installment.update({ where: { id }, data: { entryId: e.id } });
+    // COALESCE: a task with nothing paid yet has paid = NULL, and NULL + x stays NULL.
+    await tx.$executeRaw`UPDATE "Task" SET "paid" = COALESCE("paid", 0) + ${x.amount} WHERE "id" = ${x.taskId} AND "userId" = ${userId}`;
+  });
+  done();
+}
+
+/** Undo a payment marked by mistake: takes it off the task and removes the income it recorded. */
+export async function unpayInstallment(id: string) {
+  const userId = await requireUser();
+  const x = await prisma.installment.findFirst({ where: { id, userId } });
+  if (!x?.paidAt) return;
+  await prisma.$transaction(async (tx) => {
+    const claimed = await tx.installment.updateMany({ where: { id, userId, paidAt: { not: null } }, data: { paidAt: null, entryId: null } });
+    if (!claimed.count) return;
+    if (x.entryId) await tx.entry.deleteMany({ where: { id: x.entryId, userId } });
+    await tx.$executeRaw`UPDATE "Task" SET "paid" = NULLIF(GREATEST(COALESCE("paid", 0) - ${x.amount}, 0), 0) WHERE "id" = ${x.taskId} AND "userId" = ${userId}`;
+  });
+  done();
+}
+
+export async function deleteInstallment(id: string) {
+  const userId = await requireUser();
+  await prisma.installment.deleteMany({ where: { id, userId, paidAt: null } });
+  done();
 }

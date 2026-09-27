@@ -35,31 +35,32 @@ model User {
 }
 
 model Task {
-  id               String     @id @default(cuid())
+  id               String        @id @default(cuid())
   userId           String
-  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   title            String
-  client           String     @default("")
+  client           String        @default("")
   due              DateTime?
-  priority         String     @default("normal") // high | normal | low
-  status           String     @default("todo") // todo | doing | done
-  source           String     @default("manual") // manual | voice | gmail | chat
-  notes            String     @default("")
+  priority         String        @default("normal") // high | normal | low
+  status           String        @default("todo") // todo | doing | done
+  source           String        @default("manual") // manual | voice | gmail | chat
+  notes            String        @default("")
   agreed           Float?
   paid             Float?
   doneAt           DateTime?
-  timeSpent        Int        @default(0) // seconds tracked with the timer
+  timeSpent        Int           @default(0) // seconds tracked with the timer
   timerStart       DateTime? // set while the timer runs
-  shareToken       String?    @unique // public invoice link
+  shareToken       String?       @unique // public invoice link
   recurringId      String? // made by a RecurringJob
-  reviewToken      String?    @unique // public link where the client reviews the delivered files
+  reviewToken      String?       @unique // public link where the client reviews the delivered files
   revisionsAllowed Int? // revisions included in the price; more are extra
   approvedAt       DateTime? // client approved the delivered work
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
   deliveries       Delivery[]
   revisions        Revision[]
   subtasks         Subtask[]
+  installments     Installment[]
 
   @@index([userId, status])
 }
@@ -207,4 +208,21 @@ model SyncedOp {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+}
+
+// A planned payment on a task (deposit, on delivery…). Marking one paid adds to Task.paid and records the income.
+model Installment {
+  id       String    @id @default(cuid())
+  taskId   String
+  task     Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId   String
+  label    String
+  amount   Float
+  due      DateTime?
+  paidAt   DateTime?
+  entryId  String? // the income row made when it was marked paid, removed again if that is undone
+  position Int       @default(0)
+
+  @@index([taskId])
+  @@index([userId, paidAt])
 }

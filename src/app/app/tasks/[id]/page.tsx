@@ -12,6 +12,7 @@ import { FocusCard } from "@/components/focus-card";
 import { TimerCard } from "@/components/timer-card";
 import { DeliveryCard } from "@/components/delivery-card";
 import { ChecklistCard } from "@/components/checklist-card";
+import { InstallmentsCard } from "@/components/installments-card";
 
 export default async function TaskDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -67,6 +68,7 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
           <button className="text-sm font-medium text-risk">امسح المهمة</button>
         </form>
       </Card>
+      <InstallmentsCard task={t} cur={cur.short} />
       <ChecklistCard taskId={t.id} />
       <DeliveryCard task={t} />
     </>

@@ -42,7 +42,13 @@ export async function GET(req: Request) {
       ? owedByClient(await prisma.task.findMany({ where: { userId: u.id, agreed: { gt: 0 } }, select: { id: true, title: true, client: true, agreed: true, paid: true } }))
       : null;
     const currency = CURRENCIES.find((c) => c.code === u.currency)?.short ?? "ج.م";
-    const digest = buildDigest(tasks, today, owed ? { total: owed.total, clients: owed.clients.length, currency } : undefined);
+    const dues = (await prisma.installment.findMany({
+      where: { userId: u.id, paidAt: null, due: { not: null, lt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1) } },
+      select: { label: true, amount: true, task: { select: { title: true, client: true } } },
+      orderBy: { due: "asc" },
+      take: 10,
+    })).map((d) => ({ label: d.label, amount: d.amount, title: d.task.title, client: d.task.client }));
+    const digest = buildDigest(tasks, today, owed ? { total: owed.total, clients: owed.clients.length, currency } : undefined, dues);
     if (!digest) { quiet++; continue; }
     if ((await pushToUser(u.id, { title: digest.title, body: digest.body, url: "/app/tasks" })).sent) sent++;
   }
