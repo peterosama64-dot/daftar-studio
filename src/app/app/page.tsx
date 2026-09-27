@@ -61,7 +61,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
               {week.map((t) => (
                 <li key={t.id} className="flex items-center gap-3 border-b border-rule py-2.5">
                   <div className="min-w-0 flex-1">
-                    <div className="num text-right text-[11px] text-muted">{AR_DAYS[t.due!.getDay()]} {shortDate(t.due!)}</div>
+                    <div className="num text-right text-[0.6875rem] text-muted">{AR_DAYS[t.due!.getDay()]} {shortDate(t.due!)}</div>
                     <div className="text-sm [overflow-wrap:anywhere]">{t.title}</div>
                   </div>
                   {t.priority === "high" ? <Pill tone="urgent">مستعجل</Pill> : <Pill tone="later">مهمة</Pill>}
@@ -70,7 +70,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             </ul>
           ) : <Empty>مفيش مواعيد تسليم في الأسبوع ده.</Empty>}
           {totals.subs.length > 0 && (
-            <p className="mt-3 text-[13px] text-muted">اشتراكاتك الشهر ده: <span className="num">{fmt(totals.S)}</span> {cur.short}</p>
+            <p className="mt-3 text-[0.8125rem] text-muted">اشتراكاتك الشهر ده: <span className="num">{fmt(totals.S)}</span> {cur.short}</p>
           )}
         </section>
       </div>

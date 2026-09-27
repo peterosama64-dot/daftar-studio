@@ -37,21 +37,21 @@ export function RemindButton({ client }: { client: string }) {
         <Button type="button" kind="secondary" small onClick={load} disabled={pending} className="justify-self-start">
           {pending ? "بجهّز الرسالة…" : "فكّره بالدفع"}
         </Button>
-        {err && <span role="alert" className="text-[13px] text-risk">{err}</span>}
+        {err && <span role="alert" className="text-[0.8125rem] text-risk">{err}</span>}
       </div>
     );
   }
   return (
     <div className="grid w-full gap-2 rounded-xl border border-rule bg-paper p-3 text-sm">
-      <label htmlFor={id} className="text-[13px] text-muted">الرسالة جاهزة — عدّل فيها لو حابب:</label>
+      <label htmlFor={id} className="text-[0.8125rem] text-muted">الرسالة جاهزة — عدّل فيها لو حابب:</label>
       <textarea id={id} value={text} onChange={(e) => setText(e.target.value)} rows={8}
-        className="w-full rounded-lg border border-rule bg-sheet px-2.5 py-2 text-[14px] leading-relaxed" />
+        className="w-full rounded-lg border border-rule bg-sheet px-2.5 py-2 text-[0.875rem] leading-relaxed" />
       <div className="flex flex-wrap items-center gap-2">
         <a href={whatsappMessageLink(phone, text)} target="_blank" rel="noopener noreferrer" className={btnClass("primary", true)}>ابعتها واتساب</a>
         <Button type="button" kind="secondary" small onClick={copy}>{copied ? "اتنسخت ✓" : "انسخ"}</Button>
         <Button type="button" kind="ghost" small onClick={() => setOpen(false)}>اقفل</Button>
       </div>
-      {!phone && <p className="text-[13px] text-muted">مفيش رقم محفوظ للعميل ده، فواتساب هيسألك تبعتها لمين. تقدر تحفظ رقمه من صفحة العميل.</p>}
+      {!phone && <p className="text-[0.8125rem] text-muted">مفيش رقم محفوظ للعميل ده، فواتساب هيسألك تبعتها لمين. تقدر تحفظ رقمه من صفحة العميل.</p>}
     </div>
   );
 }

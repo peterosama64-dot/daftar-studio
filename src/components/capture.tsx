@@ -80,7 +80,7 @@ export function Capture({ source: fixedSource, initialText = "", title = "قول
   }
 
   const row = (kind: keyof Parsed, i: number, tone: Parameters<typeof Pill>[0]["tone"], tag: string, body: React.ReactNode, value?: React.ReactNode) => (
-    <li key={`${kind}${i}`} className="flex items-center gap-2.5 rounded-xl border border-rule bg-sheet px-3 py-2.5 text-[15px]">
+    <li key={`${kind}${i}`} className="flex items-center gap-2.5 rounded-xl border border-rule bg-sheet px-3 py-2.5 text-[0.9375rem]">
       <Pill tone={tone}>{tag}</Pill>
       <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{body}</span>
       {value}
@@ -92,7 +92,7 @@ export function Capture({ source: fixedSource, initialText = "", title = "قول
     <section id="capture" className="grid scroll-mt-6 gap-3.5 rounded-2xl border border-cyan bg-sheet p-4 shadow-[0_0_0_4px_var(--cyan-soft)] lg:p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-bold">{title}</h2>
-        {!compact && <span className="text-[13px] text-muted">{EXAMPLE}</span>}
+        {!compact && <span className="text-[0.8125rem] text-muted">{EXAMPLE}</span>}
       </div>
       <div className="flex items-stretch gap-3">
         {!fixedSource && (
@@ -106,13 +106,13 @@ export function Capture({ source: fixedSource, initialText = "", title = "قول
           className={`${inputClass} resize-y`} />
       </div>
       {micHint && (
-        <p className="text-[13px] text-muted">
+        <p className="text-[0.8125rem] text-muted">
           المايك مش متاح هنا. دوس على الخانة واستخدم <b className="text-ink">مايك الكيبورد</b> بتاع موبايلك، أو افتح الموقع من Chrome أو Edge.
         </p>
       )}
       <div className="flex flex-wrap items-center gap-3">
         <Button onClick={organize} disabled={busy}>{busy ? "بيرتّب…" : "رتّبهالي"}</Button>
-        {status && <span role="status" className={`text-[13px] ${status.err ? "text-risk" : "text-muted"}`}>{status.msg}</span>}
+        {status && <span role="status" className={`text-[0.8125rem] ${status.err ? "text-risk" : "text-muted"}`}>{status.msg}</span>}
       </div>
       {draft && (
         <div className="grid gap-2">

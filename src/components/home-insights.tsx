@@ -82,7 +82,7 @@ export async function HomeInsights({ uid, today, entries, tasks }: { uid: string
             {line("لسه جاي", fc.totalNow)}
             {line("اشتراكات ومصاريف", -(cur.S + cur.X))}
             <div className="flex justify-between gap-3 border-t border-rule pt-1.5 font-semibold"><span>هتقفل على حوالي</span><span><span className={`num ${landNow < 0 ? "text-risk" : "text-money"}`}>{signed(landNow)}</span> {c}</span></div>
-            {overdueNow > 0 && <p className="text-[13px] text-wait">منهم {fmt(overdueNow)} {c} ميعادهم عدّى — فكّر العملاء.</p>}
+            {overdueNow > 0 && <p className="text-[0.8125rem] text-wait">منهم {fmt(overdueNow)} {c} ميعادهم عدّى — فكّر العملاء.</p>}
           </div>
           <div className="grid gap-1.5">
             <p className="font-semibold">{monthName(next)} <span className="text-xs font-normal text-muted">(الجاي)</span></p>
@@ -102,7 +102,7 @@ export async function HomeInsights({ uid, today, entries, tasks }: { uid: string
               ))}
             </ul>
           )}
-          {fc.totalUnscheduled > 0 && <p className="text-[13px] text-muted">وفيه {fmt(fc.totalUnscheduled)} {c} على شغل من غير ميعاد — حط مواعيد أو دفعات عشان تدخل في التوقع.</p>}
+          {fc.totalUnscheduled > 0 && <p className="text-[0.8125rem] text-muted">وفيه {fmt(fc.totalUnscheduled)} {c} على شغل من غير ميعاد — حط مواعيد أو دفعات عشان تدخل في التوقع.</p>}
         </Card>
       ) : null}
     </div>

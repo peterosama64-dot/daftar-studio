@@ -98,9 +98,9 @@ export function NotifyCard() {
         </div>
       )}
       {msg && <p role="status" className={`text-sm ${msg.err ? "text-risk" : "text-money"}`}>{msg.text}</p>}
-      <p className="text-[13px] text-muted">فعّلها على كل جهاز عايزها عليه (الموبايل واللابتوب).</p>
+      <p className="text-[0.8125rem] text-muted">فعّلها على كل جهاز عايزها عليه (الموبايل واللابتوب).</p>
       {state === "on" && (
-        <details className="text-[13px] text-muted">
+        <details className="text-[0.8125rem] text-muted">
           <summary className="cursor-pointer text-ink2">التنبيه مش بيظهر؟</summary>
           <ul className="mt-1.5 list-inside list-disc">
             <li>ويندوز: الإعدادات ← System ← Notifications ← شغّلها، وشغّل Google Chrome (أو Edge) تحتها، واقفل Do not disturb / Focus.</li>

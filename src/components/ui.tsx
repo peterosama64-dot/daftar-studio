@@ -13,7 +13,7 @@ export function Logo({ size = 26 }: { size?: number }) {
 
 export function Brand({ href = "/" }: { href?: string }) {
   return (
-    <Link href={href} className="flex items-center gap-2.5 font-display text-[19px] font-bold no-underline">
+    <Link href={href} className="flex items-center gap-2.5 font-display text-[1.1875rem] font-bold no-underline">
       <Logo /> دفتر الاستوديو
     </Link>
   );
@@ -54,7 +54,7 @@ const BTN: Record<BtnKind, string> = {
 };
 export const btnClass = (kind: BtnKind = "primary", small = false) =>
   `inline-flex items-center justify-center gap-2 rounded-xl border font-display font-semibold transition-transform active:translate-y-px disabled:opacity-50 ${
-    small ? "min-h-9 px-3.5 text-sm" : "min-h-12 px-5 text-[15px]"
+    small ? "min-h-9 px-3.5 text-sm" : "min-h-12 px-5 text-[0.9375rem]"
   } ${BTN[kind]}`;
 
 export function Button({ kind = "primary", small, className = "", ...p }: ComponentProps<"button"> & { kind?: BtnKind; small?: boolean }) {
@@ -75,7 +75,7 @@ export function SectionHead({ title, count, rule = "ink" }: { title: string; cou
   );
 }
 
-export const inputClass = "w-full min-w-0 rounded-[10px] border border-rule bg-paper px-3.5 py-2.5 text-[15px] text-ink placeholder:text-muted focus:border-cyan focus:outline-none";
+export const inputClass = "w-full min-w-0 rounded-[10px] border border-rule bg-paper px-3.5 py-2.5 text-[0.9375rem] text-ink placeholder:text-muted focus:border-cyan focus:outline-none";
 
 export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: ReactNode }) {
   return (

@@ -29,7 +29,7 @@ export default async function Recurring() {
               <Field label={`المبلغ في الشهر (${cur.short})`}><input name="amount" required inputMode="decimal" className={`${inputClass} num text-left`} /></Field>
               <Field label="ميعاد التسليم (يوم كام في الشهر)"><input name="day" inputMode="numeric" defaultValue={25} className={`${inputClass} num text-left`} /></Field>
             </div>
-            <p className="text-[13px] text-muted">أول كل شهر هتلاقي مهمة جديدة باسم الشهر، بالمبلغ ده، وميعادها اليوم اللي اخترته. لو الشهر ده لسه ملوش مهمة، هتتعمل دلوقتي.</p>
+            <p className="text-[0.8125rem] text-muted">أول كل شهر هتلاقي مهمة جديدة باسم الشهر، بالمبلغ ده، وميعادها اليوم اللي اخترته. لو الشهر ده لسه ملوش مهمة، هتتعمل دلوقتي.</p>
             <Button>ضيف الباقة</Button>
           </form>
         </Card>
@@ -51,7 +51,7 @@ export default async function Recurring() {
               ))}
             </ul>
           ) : <Empty>لسه مفيش باقات شهرية.</Empty>}
-          <p className="mt-2 text-[13px] text-muted">المهام اللي اتعملت قبل كده بتفضل زي ما هي لو وقّفت الباقة أو مسحتها.</p>
+          <p className="mt-2 text-[0.8125rem] text-muted">المهام اللي اتعملت قبل كده بتفضل زي ما هي لو وقّفت الباقة أو مسحتها.</p>
         </Card>
       </div>
     </>

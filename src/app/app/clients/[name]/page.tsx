@@ -43,13 +43,13 @@ export default async function ClientPage({ params }: { params: Promise<{ name: s
   const rate = rateReport(tasks.map((t) => ({ ...t, agreed: t.agreed === null ? null : fx.toBase(t.agreed, t.currency) })));
   const wa = info?.phone ? whatsappLink(info.phone) : null;
   const stat = (k: string, v: string, c = "") => (
-    <div className="grid gap-0.5 rounded-xl border border-rule bg-sheet px-4 py-3"><span className="text-[13px] text-muted">{k}</span><span className={`num text-xl font-medium ${c}`}>{v}</span></div>
+    <div className="grid gap-0.5 rounded-xl border border-rule bg-sheet px-4 py-3"><span className="text-[0.8125rem] text-muted">{k}</span><span className={`num text-xl font-medium ${c}`}>{v}</span></div>
   );
   return (
     <>
       <Link href="/app/clients" className="text-sm text-cyan">› كل العملاء</Link>
       <header className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-2xl font-bold lg:text-[28px] [overflow-wrap:anywhere]">{name}</h1>
+        <h1 className="text-2xl font-bold lg:text-[1.75rem] [overflow-wrap:anywhere]">{name}</h1>
         <div className="flex flex-wrap gap-2">
           {wa && <a href={wa} target="_blank" rel="noopener noreferrer" className={btnClass("secondary", true)}>واتساب</a>}
           {info?.email && <a href={`mailto:${info.email}`} className={btnClass("secondary", true)}>إيميل</a>}
@@ -139,7 +139,7 @@ export default async function ClientPage({ params }: { params: Promise<{ name: s
               </div>
             </Card>
           )}
-          <p className="text-[13px] text-muted">المبالغ بالـ{cur.short}.</p>
+          <p className="text-[0.8125rem] text-muted">المبالغ بالـ{cur.short}.</p>
         </div>
       </div>
     </>

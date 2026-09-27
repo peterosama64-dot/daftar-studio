@@ -80,7 +80,7 @@ export default async function Leads({ searchParams }: { searchParams: Promise<{ 
           ["نسبة اللي اتفقت (٩٠ يوم)", s.winRate === null ? "—" : `${s.winRate}%`],
         ].map(([k, v]) => (
           <div key={k} className="grid gap-0.5 rounded-xl border border-rule bg-sheet px-4 py-3">
-            <span className="text-[13px] text-muted">{k}</span><span dir={v.includes("%") ? "ltr" : "rtl"} className="num text-right text-xl font-medium">{v}</span>
+            <span className="text-[0.8125rem] text-muted">{k}</span><span dir={v.includes("%") ? "ltr" : "rtl"} className="num text-right text-xl font-medium">{v}</span>
           </div>
         ))}
       </section>

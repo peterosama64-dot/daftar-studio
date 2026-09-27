@@ -35,7 +35,7 @@ export default async function Portal({ params }: { params: Promise<{ token: stri
   const tcur = (c: string | null) => (mixed ? ` ${fx.short(c)}` : "");
   const from = p.user.name || p.user.email;
   const stat = (k: string, v: number, c = "") => (
-    <div className="grid gap-0.5 rounded-xl border border-rule bg-sheet px-4 py-3"><span className="text-[13px] text-muted">{k}</span><span className={`num text-xl font-medium ${c}`}>{fmt(v)}</span></div>
+    <div className="grid gap-0.5 rounded-xl border border-rule bg-sheet px-4 py-3"><span className="text-[0.8125rem] text-muted">{k}</span><span className={`num text-xl font-medium ${c}`}>{fmt(v)}</span></div>
   );
   return (
     <>
@@ -62,7 +62,7 @@ export default async function Portal({ params }: { params: Promise<{ token: stri
                   {rem > 0 ? <Pill tone="waiting">باقي {fmt(rem)}{tcur(t.currency)}</Pill> : <Pill tone="money">خالص</Pill>}
                 </div>
                 {t.installments.length > 0 && (
-                  <ul className="grid gap-0.5 ps-3 text-[13px] text-muted">{t.installments.map((x, i) => (
+                  <ul className="grid gap-0.5 ps-3 text-[0.8125rem] text-muted">{t.installments.map((x, i) => (
                     <li key={i} className="flex flex-wrap gap-x-2">
                       <span>{x.label}</span><span className="num">{fmt(x.amount)}</span>
                       <span>{x.paidAt ? "· اتدفعت ✓" : x.due ? `· ميعادها ${shortDate(x.due)}` : ""}</span>

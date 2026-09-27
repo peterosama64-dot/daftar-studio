@@ -42,7 +42,7 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
       {q.shareToken && (
         <div className="mx-auto w-full max-w-2xl">
           <ShareBox path={`/s/q/${q.shareToken}`} {...share} />
-          {q.status !== "accepted" && <p className="mt-1.5 text-[13px] text-muted print:hidden">العميل يقدر يوافق من اللينك، وساعتها المهمة بتتعمل لوحدها ويوصلك تنبيه.</p>}
+          {q.status !== "accepted" && <p className="mt-1.5 text-[0.8125rem] text-muted print:hidden">العميل يقدر يوافق من اللينك، وساعتها المهمة بتتعمل لوحدها ويوصلك تنبيه.</p>}
         </div>
       )}
       <QuoteDoc no={no} created={q.createdAt} validUntil={validUntil(q.createdAt, q.validDays)} from={user ?? noParty}
@@ -50,7 +50,7 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
       <form action={deleteQuote.bind(null, q.id)} className="mx-auto flex w-full max-w-2xl flex-wrap items-center gap-2 print:hidden">
         <ConfirmButton className="text-sm font-medium text-risk"
           message={q.status === "accepted" ? "تمسح العرض؟ المهمة اللي اتعملت منه هتفضل زي ما هي." : "تمسح العرض ده؟"}>امسح العرض</ConfirmButton>
-        {q.status === "accepted" && <span className="text-[13px] text-muted">المهمة اللي اتعملت منه هتفضل زي ما هي.</span>}
+        {q.status === "accepted" && <span className="text-[0.8125rem] text-muted">المهمة اللي اتعملت منه هتفضل زي ما هي.</span>}
       </form>
     </>
   );

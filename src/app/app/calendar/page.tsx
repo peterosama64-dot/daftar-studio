@@ -36,7 +36,7 @@ export default async function Calendar({ searchParams }: { searchParams: SP }) {
         : t.priority === "high" ? "bg-risk-soft text-ink" : "bg-cyan-soft text-ink";
   const chip = (t: T) => (
     <Link key={t.id} href={`/app/tasks/${t.id}`} title={t.client ? `${t.title} · ${t.client}` : t.title}
-      className={`block truncate rounded-md px-1.5 py-0.5 text-[12px] hover:outline hover:outline-1 hover:outline-cyan ${tone(t)}`}>{t.title}</Link>
+      className={`block truncate rounded-md px-1.5 py-0.5 text-[0.75rem] hover:outline hover:outline-1 hover:outline-cyan ${tone(t)}`}>{t.title}</Link>
   );
   const open = tasks.filter((t) => t.status !== "done").length;
   return (
@@ -59,7 +59,7 @@ export default async function Calendar({ searchParams }: { searchParams: SP }) {
                 <div key={di} className={`grid min-h-28 content-start gap-1 border-l border-rule p-1.5 last:border-l-0 ${isToday ? "bg-selected" : ""}`}>
                   <span className={`num justify-self-start text-xs ${isToday ? "grid size-6 place-items-center rounded-full bg-cyan font-semibold text-on-accent" : "text-muted"}`}>{d.getDate()}</span>
                   {list.slice(0, 3).map(chip)}
-                  {list.length > 3 && <span className="text-[11px] text-muted">+{list.length - 3} كمان</span>}
+                  {list.length > 3 && <span className="text-[0.6875rem] text-muted">+{list.length - 3} كمان</span>}
                 </div>
               );
             })}

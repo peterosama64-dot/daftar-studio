@@ -26,7 +26,7 @@ export default async function Review({ params }: { params: Promise<{ token: stri
       </header>
       <Card className="grid gap-4 p-5">
         {t.deliveries.length ? <DeliveryFiles files={t.deliveries} /> : <p className="text-sm text-muted">لسه مفيش ملفات.</p>}
-        <p className="text-[13px] text-muted">دوس على أي صورة عشان تفتحها بالحجم الكامل.</p>
+        <p className="text-[0.8125rem] text-muted">دوس على أي صورة عشان تفتحها بالحجم الكامل.</p>
       </Card>
 
       {t.approvedAt ? (
@@ -38,7 +38,7 @@ export default async function Review({ params }: { params: Promise<{ token: stri
             <label htmlFor="note" className="font-semibold">محتاج تعديل؟</label>
             <textarea id="note" name="note" required maxLength={1000} rows={3} placeholder="اكتب التعديلات المطلوبة بالتفصيل" className={inputClass} />
             {r.allowed !== null && (
-              <p className={`text-[13px] ${r.nextIsExtra ? "text-risk" : "text-muted"}`}>
+              <p className={`text-[0.8125rem] ${r.nextIsExtra ? "text-risk" : "text-muted"}`}>
                 {r.nextIsExtra
                   ? `التعديلات المتفق عليها (${r.allowed}) خلصت، والتعديل ده ممكن يكون بتكلفة إضافية.`
                   : `ده هيبقى التعديل رقم ${r.used + 1} من ${r.allowed} متفق عليهم.`}

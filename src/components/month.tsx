@@ -16,7 +16,7 @@ export function PageHead({ title, sub, month, base, children }: { title: string;
   return (
     <header className="flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-bold lg:text-[28px]">{title}</h1>
+        <h1 className="text-2xl font-bold lg:text-[1.75rem]">{title}</h1>
         {sub && <p className="text-sm text-muted">{sub}</p>}
       </div>
       <div className="flex flex-wrap items-center gap-2">

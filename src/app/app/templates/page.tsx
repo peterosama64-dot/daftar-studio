@@ -42,7 +42,7 @@ export default async function Templates({ searchParams }: { searchParams: Promis
             <TemplateFields cur={cur.short} />
             <Button>احفظ القالب</Button>
           </form>
-          <p className="mt-3 text-[13px] text-muted">أو من أي مهمة: «احفظها كقالب» بياخد اسمها وسعرها وخطواتها.</p>
+          <p className="mt-3 text-[0.8125rem] text-muted">أو من أي مهمة: «احفظها كقالب» بياخد اسمها وسعرها وخطواتها.</p>
         </Card>
         <Card className="p-5">
           <h2 className="mb-2 text-lg font-bold">القوالب</h2>

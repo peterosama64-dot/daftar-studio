@@ -64,7 +64,7 @@ export function GmailPanel({ email, configured, notice }: { email: string | null
       ) : !email ? (
         <>
           <p className="text-sm text-ink2">اربط Gmail مرة واحدة، وبعدها تختار الإيميلات اللي فيها شغل أو فلوس، والدفتر يطلّع منها المهام والمبالغ.</p>
-          <p className="text-[13px] text-muted">الإذن <b className="text-ink">قراءة بس</b>: الدفتر مش هيبعت ولا يمسح أي إيميل، ومش بيحفظ الإيميلات. بيقرا اللي تختاره إنت لما تدوس.</p>
+          <p className="text-[0.8125rem] text-muted">الإذن <b className="text-ink">قراءة بس</b>: الدفتر مش هيبعت ولا يمسح أي إيميل، ومش بيحفظ الإيميلات. بيقرا اللي تختاره إنت لما تدوس.</p>
           <a href="/api/gmail/connect" className={btnClass("primary")}>اربط Gmail</a>
         </>
       ) : (
@@ -78,7 +78,7 @@ export function GmailPanel({ email, configured, notice }: { email: string | null
           {mails && mails.length === 0 && <p className="text-sm text-muted">{kind === "receipts" ? "مفيش إيصالات اشتراكات في آخر ٣ شهور." : "مفيش إيميلات في آخر أسبوعين (من غير العروض والسوشيال)."}</p>}
           {mails && mails.length > 0 && (
             <>
-              <p className="text-[13px] text-muted">{kind === "receipts"
+              <p className="text-[0.8125rem] text-muted">{kind === "receipts"
                 ? "إيصالات وفواتير آخر ٣ شهور. شيل العلامة من اللي مش اشتراك، والدفتر هيضيف الباقي للاشتراكات (ولو الاشتراك موجود بيحدّث مبلغه بس):"
                 : "آخر أسبوعين. علّم على اللي فيه شغل أو فلوس:"}</p>
               <ul className="grid max-h-[420px] gap-2 overflow-y-auto">
@@ -88,8 +88,8 @@ export function GmailPanel({ email, configured, notice }: { email: string | null
                       <input type="checkbox" checked={picked.has(m.id)} onChange={() => toggle(m.id)} className="mt-1 size-4 accent-[var(--cyan)]" />
                       <span className="min-w-0">
                         <span className="block truncate font-semibold">{m.subject || "(من غير عنوان)"}</span>
-                        <span className="block truncate text-[13px] text-muted">{shortFrom(m.from)}</span>
-                        <span className="line-clamp-2 text-[13px] text-ink2 [overflow-wrap:anywhere]">{m.snippet}</span>
+                        <span className="block truncate text-[0.8125rem] text-muted">{shortFrom(m.from)}</span>
+                        <span className="line-clamp-2 text-[0.8125rem] text-ink2 [overflow-wrap:anywhere]">{m.snippet}</span>
                       </span>
                     </label>
                   </li>

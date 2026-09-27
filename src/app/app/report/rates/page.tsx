@@ -45,7 +45,7 @@ export default async function Rates() {
               ["شغل من غير وقت", String(r.untracked), "مش داخل في الحساب"],
             ].map(([k, v, s]) => (
               <div key={k} className="grid gap-0.5 rounded-xl border border-rule bg-sheet px-4 py-3">
-                <span className="text-[13px] text-muted">{k}</span>
+                <span className="text-[0.8125rem] text-muted">{k}</span>
                 <span dir="rtl" className="num text-right text-xl font-medium">{v}</span>
                 <span className="text-xs text-muted">{s}</span>
               </div>
@@ -53,7 +53,7 @@ export default async function Rates() {
           </section>
           <Card className="p-5">
             <h2 className="mb-1 text-lg font-bold">حسب العميل</h2>
-            <p className="mb-3 text-[13px] text-muted">الخط الرفيع = متوسطك ({fmt(r.overall)} {per}). الأخضر فوق المتوسط، والبرتقاني تحته — يمكن محتاج تزوّد سعره.</p>
+            <p className="mb-3 text-[0.8125rem] text-muted">الخط الرفيع = متوسطك ({fmt(r.overall)} {per}). الأخضر فوق المتوسط، والبرتقاني تحته — يمكن محتاج تزوّد سعره.</p>
             <ul className="grid gap-3">
               {r.clients.map((c) => {
                 const above = c.rate >= r.overall!;

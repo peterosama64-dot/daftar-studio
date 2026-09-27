@@ -52,7 +52,7 @@ export async function InstallmentsCard({ task, cur }: { task: { id: string; agre
             })}
           </ul>
           {s.gap !== 0 && task.agreed ? (
-            <p className="text-[13px] text-wait">مجموع الدفعات {fmt(s.planned)} والمتفق عليه {fmt(task.agreed)} — {s.gap > 0 ? `فاضل ${fmt(s.gap)} مش متقسّم` : `زيادة ${fmt(-s.gap)}`}.</p>
+            <p className="text-[0.8125rem] text-wait">مجموع الدفعات {fmt(s.planned)} والمتفق عليه {fmt(task.agreed)} — {s.gap > 0 ? `فاضل ${fmt(s.gap)} مش متقسّم` : `زيادة ${fmt(-s.gap)}`}.</p>
           ) : null}
           {unpaid.length > 0 || left > 0 ? (
             <details className="text-sm">

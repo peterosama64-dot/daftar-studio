@@ -53,7 +53,7 @@ export function FileUploader({ taskId, round }: { taskId: string; round: number 
       <Button kind="secondary" small type="button" disabled={busy} onClick={() => input.current?.click()}>
         {busy ? "بيرفع…" : round > 1 ? `ارفع ملفات النسخة ${round}` : "ارفع ملفات التسليم"}
       </Button>
-      {status && <p role="status" className={`text-[13px] ${status.err ? "text-risk" : "text-money"}`}>{status.msg}</p>}
+      {status && <p role="status" className={`text-[0.8125rem] ${status.err ? "text-risk" : "text-money"}`}>{status.msg}</p>}
     </div>
   );
 }

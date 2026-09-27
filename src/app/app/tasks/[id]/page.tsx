@@ -67,9 +67,9 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
           ) : null}
           <Field label="ملاحظات"><textarea name="notes" defaultValue={t.notes} rows={4} className={inputClass} /></Field>
           {fx.of(t.currency) !== fx.base && t.agreed ? (
-            <p className="text-[13px] text-muted">≈ {fmt(fx.toBase(t.agreed, t.currency))} {fx.short(null)} بسعر النهارده{fx.missing(t.currency) ? " — مفيش سعر صرف متسجّل، حطه من الإعدادات" : ""}. الفلوس اللي بتقبضها بتتسجّل بعملتك الأساسية.</p>
+            <p className="text-[0.8125rem] text-muted">≈ {fmt(fx.toBase(t.agreed, t.currency))} {fx.short(null)} بسعر النهارده{fx.missing(t.currency) ? " — مفيش سعر صرف متسجّل، حطه من الإعدادات" : ""}. الفلوس اللي بتقبضها بتتسجّل بعملتك الأساسية.</p>
           ) : null}
-          {SOURCE_LABEL[t.source as Source] && <p className="text-[13px] text-muted">جاية {SOURCE_LABEL[t.source as Source]}</p>}
+          {SOURCE_LABEL[t.source as Source] && <p className="text-[0.8125rem] text-muted">جاية {SOURCE_LABEL[t.source as Source]}</p>}
           <div className="flex items-center justify-between gap-3">
             <Button>احفظ</Button>
             {t.agreed ? <Link href={`/app/tasks/${t.id}/invoice`} className={btnClass("secondary", true)}>اعمل فاتورة</Link> : null}

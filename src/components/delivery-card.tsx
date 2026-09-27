@@ -61,7 +61,7 @@ export async function DeliveryCard({ task }: { task: { id: string; reviewToken: 
                 <li key={x.id} className={`flex items-start gap-2 rounded-lg px-2.5 py-2 ${extra ? "bg-risk-soft" : "bg-paper"}`}>
                   <span className="num text-muted">{i + 1}</span>
                   <span className="min-w-0 flex-1 whitespace-pre-wrap [overflow-wrap:anywhere]">{x.note || "—"}</span>
-                  <span className="text-[12px] text-muted">{x.by === "client" ? "العميل" : "إنت"} · {shortDate(x.createdAt)}{extra ? " · زيادة" : ""}</span>
+                  <span className="text-[0.75rem] text-muted">{x.by === "client" ? "العميل" : "إنت"} · {shortDate(x.createdAt)}{extra ? " · زيادة" : ""}</span>
                   <form action={deleteRevision.bind(null, x.id)}><button className="px-1 text-muted hover:text-risk" aria-label="امسح التعديل">✕</button></form>
                 </li>
               );

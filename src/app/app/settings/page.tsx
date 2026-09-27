@@ -10,6 +10,7 @@ import { isAdmin } from "@/lib/admin";
 import { NotifyCard } from "@/components/notify-card";
 import { LogoUpload } from "@/components/logo-upload";
 import { BackupCard } from "@/components/backup-card";
+import { AppearanceCard } from "@/components/appearance-card";
 import { setCurrency, setName, setRates, deleteEverything } from "../actions";
 import { parseRates } from "@/lib/fx";
 
@@ -83,6 +84,7 @@ export default async function Settings() {
           {row("Gmail", "قراءة الإيميلات وإيصالات الاشتراكات، من صفحة «الرسايل».", gmail ? <Pill tone="money">متوصّل</Pill> : <Link href="/app/inbox" className={btnClass("secondary", true)}>اربطه</Link>)}
           {row("واتساب", "مفيش ربط مباشر. صدّر الشات والزقه في «الرسايل».", <Pill>يدوي</Pill>)}
         </Card>
+        <AppearanceCard />
         <NotifyCard />
         <Card className="p-5 lg:col-span-2">
           <h2 className="text-lg font-bold">نسخة Excel</h2>
