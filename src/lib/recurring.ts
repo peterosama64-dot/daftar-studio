@@ -24,7 +24,7 @@ type Db = {
 export async function runRecurring(db: Db, today: Date, userId?: string): Promise<number> {
   const month = monthKey(today);
   const notThisMonth = { OR: [{ lastMonth: null }, { lastMonth: { not: month } }] };
-  const jobs = await db.recurringJob.findMany({ where: { active: true, ...notThisMonth, ...(userId ? { userId } : {}) } });
+  const jobs = await db.recurringJob.findMany({ where: { active: true, user: { suspendedAt: null }, ...notThisMonth, ...(userId ? { userId } : {}) } });
   let made = 0;
   for (const j of jobs) {
     const claimed = await db.recurringJob.updateMany({ where: { id: j.id, ...notThisMonth }, data: { lastMonth: month } });

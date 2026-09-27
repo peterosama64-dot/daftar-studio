@@ -23,7 +23,7 @@ export async function GET(req: Request) {
   const recurring = await runRecurring(prisma, today);
   const tomorrowEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2);
   const users = await prisma.user.findMany({
-    where: { push: { some: {} }, OR: [{ lastDigest: null }, { lastDigest: { not: key } }] },
+    where: { push: { some: {} }, suspendedAt: null, OR: [{ lastDigest: null }, { lastDigest: { not: key } }] },
     select: { id: true, currency: true },
   });
 
@@ -51,7 +51,7 @@ export async function GET(req: Request) {
   if (today.getDate() === 1) {
     const prev = shiftMonth(monthKey(today), -1);
     const all = await prisma.user.findMany({
-      where: { push: { some: {} }, OR: [{ lastMonthly: null }, { lastMonthly: { not: prev } }] },
+      where: { push: { some: {} }, suspendedAt: null, OR: [{ lastMonthly: null }, { lastMonthly: { not: prev } }] },
       select: { id: true, currency: true, incomeGoal: true },
     });
     for (const u of all) {

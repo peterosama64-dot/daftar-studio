@@ -15,7 +15,7 @@ export const metadata = { title: "عرض سعر" };
 export default async function SharedQuote({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   if (!isToken(token)) notFound();
-  const q = await prisma.quote.findUnique({ where: { shareToken: token }, include: { user: { select: { name: true, email: true, currency: true } } } });
+  const q = await prisma.quote.findUnique({ where: { shareToken: token, user: { suspendedAt: null } }, include: { user: { select: { name: true, email: true, currency: true } } } });
   if (!q) notFound();
   const items = readItems(q.items);
   const no = quoteNumber(q);

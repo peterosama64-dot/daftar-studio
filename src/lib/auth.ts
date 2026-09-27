@@ -22,12 +22,22 @@ export async function endSession() {
   (await cookies()).delete(SESSION_COOKIE);
 }
 
-/** Current user id, or null. Also checks the user still exists (deleted accounts lose access). */
+const SEEN_EVERY = 60 * 60 * 1000;
+
+/**
+ * Current user id, or null. Also checks the user still exists and isn't suspended (deleted or suspended
+ * accounts lose access at once), and notes activity at most once an hour for the admin page.
+ */
 export async function currentUserId(): Promise<string | null> {
   const uid = await verifySession((await cookies()).get(SESSION_COOKIE)?.value);
   if (!uid) return null;
-  const u = await prisma.user.findUnique({ where: { id: uid }, select: { id: true } });
-  return u?.id ?? null;
+  const u = await prisma.user.findUnique({ where: { id: uid }, select: { id: true, suspendedAt: true, lastSeenAt: true } });
+  if (!u || u.suspendedAt) return null;
+  const t = Date.now();
+  if (!u.lastSeenAt || t - u.lastSeenAt.getTime() > SEEN_EVERY) {
+    await prisma.user.updateMany({ where: { id: uid }, data: { lastSeenAt: new Date(t) } }).catch(() => {});
+  }
+  return u.id;
 }
 
 /** For pages and server actions: the signed-in user's id, or a redirect to /login. */
