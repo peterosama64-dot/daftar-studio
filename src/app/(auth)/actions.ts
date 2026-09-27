@@ -64,6 +64,7 @@ export async function login(_: AuthState, f: FormData): Promise<AuthState> {
     return { email, error: "الإيميل أو كلمة السر مش مظبوطين." };
   }
   failures.delete(key);
+  if (user.suspendedAt) return { email, error: "الحساب ده متوقّف. كلّم الدعم لو محتاج تفتحه تاني." };
   await startSession(user.id);
   redirect(safeNext(f.get("next")));
 }

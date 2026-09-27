@@ -8,7 +8,7 @@ import { pushToUser } from "@/lib/push";
 /** The client accepts from the public link. Only a live link on a draft quote can do this. */
 export async function acceptSharedQuote(token: string) {
   if (!isToken(token)) return;
-  const q = await prisma.quote.findUnique({ where: { shareToken: token }, select: { id: true, userId: true, client: true, title: true } });
+  const q = await prisma.quote.findUnique({ where: { shareToken: token, user: { suspendedAt: null } }, select: { id: true, userId: true, client: true, title: true } });
   if (!q) return;
   const r = await acceptQuoteFor(q.userId, q.id);
   if (r?.fresh) {
@@ -25,7 +25,7 @@ export async function acceptSharedQuote(token: string) {
 /** Client approves the delivered work from the review link. */
 export async function approveWork(token: string) {
   if (!isToken(token)) return;
-  const t = await prisma.task.findUnique({ where: { reviewToken: token }, select: { id: true, userId: true, title: true, client: true, approvedAt: true } });
+  const t = await prisma.task.findUnique({ where: { reviewToken: token, user: { suspendedAt: null } }, select: { id: true, userId: true, title: true, client: true, approvedAt: true } });
   if (!t || t.approvedAt) return;
   const done = await prisma.task.updateMany({ where: { id: t.id, approvedAt: null }, data: { approvedAt: new Date() } });
   if (done.count) {
@@ -39,7 +39,7 @@ export async function requestRevision(token: string, f: FormData) {
   if (!isToken(token)) return;
   const note = String(f.get("note") ?? "").trim().slice(0, 1000);
   if (!note) return;
-  const t = await prisma.task.findUnique({ where: { reviewToken: token }, select: { id: true, userId: true, title: true, client: true, _count: { select: { revisions: true } } } });
+  const t = await prisma.task.findUnique({ where: { reviewToken: token, user: { suspendedAt: null } }, select: { id: true, userId: true, title: true, client: true, _count: { select: { revisions: true } } } });
   if (!t || t._count.revisions >= 50) return;
   await prisma.$transaction([
     prisma.revision.create({ data: { taskId: t.id, userId: t.userId, note, by: "client" } }),

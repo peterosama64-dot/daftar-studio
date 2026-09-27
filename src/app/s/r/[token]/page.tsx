@@ -12,7 +12,7 @@ export default async function Review({ params }: { params: Promise<{ token: stri
   const { token } = await params;
   if (!isToken(token)) notFound();
   const t = await prisma.task.findUnique({
-    where: { reviewToken: token },
+    where: { reviewToken: token, user: { suspendedAt: null } },
     include: { user: { select: { name: true, email: true } }, deliveries: { orderBy: { createdAt: "asc" } }, revisions: { orderBy: { createdAt: "asc" } } },
   });
   if (!t) notFound();

@@ -25,3 +25,13 @@ export async function adminDeleteUser(f: FormData) {
   await prisma.user.deleteMany({ where: { id } });
   revalidatePath("/app/admin");
 }
+
+/** Suspends an account (can't sign in, links and reminders stop) or lifts the suspension. Never your own. */
+export async function adminSetSuspended(f: FormData) {
+  const me = await requireAdmin();
+  const id = str(f, "id");
+  if (!id || id === me) return;
+  const on = str(f, "on") === "1";
+  await prisma.user.updateMany({ where: { id, suspendedAt: on ? null : { not: null } }, data: { suspendedAt: on ? new Date() : null } });
+  revalidatePath("/app/admin");
+}

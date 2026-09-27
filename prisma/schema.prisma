@@ -26,6 +26,8 @@ model User {
   lastDigest   String? // "YYYY-MM-DD" of the last morning reminder, so the daily job never sends twice
   lastMonthly  String? // "YYYY-MM" of the last month-summary notification
   incomeGoal   Float? // monthly income target, shown on the home page
+  suspendedAt  DateTime? // set by an admin: can't sign in, no reminders, shared links stop working
+  lastSeenAt   DateTime? // updated at most hourly, for the admin's activity numbers
   quotes       Quote[]
   recurring    RecurringJob[]
   clientInfos  ClientInfo[]
