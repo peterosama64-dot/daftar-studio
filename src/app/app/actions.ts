@@ -24,6 +24,7 @@ import { buildWeekly } from "@/lib/weekly";
 import { weeklyFor } from "@/lib/weekly-data";
 import { draftContract } from "@/lib/contract";
 import type { ReminderData } from "@/lib/remind";
+import { autoPlan, weekStart } from "@/lib/week";
 
 const done = () => revalidatePath("/app", "layout");
 const str = (f: FormData, k: string, max = 200) => String(f.get(k) ?? "").trim().slice(0, max);
@@ -855,4 +856,52 @@ export async function deleteMeeting(id: string) {
   const userId = await requireUser();
   await prisma.meeting.deleteMany({ where: { id, userId } });
   meetingPath();
+}
+
+// ---------- week plan ----------
+const weekPath = () => { revalidatePath("/app/week"); revalidatePath("/app"); };
+
+/** Put a job on a day of the plan ("YYYY-MM-DD"), or take it off with "". */
+export async function planTask(id: string, day: string) {
+  const userId = await requireUser();
+  const d = day ? parseDay(day) : null;
+  if (day && !d) return;
+  await prisma.task.updateMany({ where: { id, userId }, data: { planDay: d } });
+  weekPath();
+}
+
+/** Estimated hours for a job (0.25–24); empty clears it. */
+export async function setEstimate(id: string, f: FormData) {
+  const userId = await requireUser();
+  const h = num(f, "hours");
+  const estimate = h === null || h === 0 ? null : Math.round(Math.min(24, Math.max(0.25, h)) * 60);
+  await prisma.task.updateMany({ where: { id, userId }, data: { estimate } });
+  weekPath();
+}
+
+export async function setDayHours(f: FormData) {
+  const userId = await requireUser();
+  const h = num(f, "dayHours");
+  if (h === null) return;
+  await prisma.user.updateMany({ where: { id: userId }, data: { dayHours: Math.round(Math.min(16, Math.max(1, h))) } });
+  weekPath();
+}
+
+/** «وزّعهم لي» for the week that starts on `start`: only jobs not yet on the plan are placed. */
+export async function autoPlanWeek(start: string) {
+  const userId = await requireUser();
+  const s = parseDay(start);
+  if (!s) return;
+  const ws = weekStart(s);
+  const [tasks, u] = await Promise.all([
+    prisma.task.findMany({ where: { userId, status: { not: "done" } }, select: { id: true, title: true, client: true, due: true, priority: true, status: true, planDay: true, estimate: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { dayHours: true } }),
+  ]);
+  const t = now(), todayStart = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  // A job left on a past day and not finished is placed again, like an unplanned one.
+  const plan = autoPlan(tasks.map((x) => (x.planDay && x.planDay < todayStart ? { ...x, planDay: null } : x)), ws, t, u?.dayHours ?? 6);
+  // The filter keeps a placement the user made meanwhile.
+  const free = { OR: [{ planDay: null }, { planDay: { lt: todayStart } }] };
+  await prisma.$transaction([...plan].map(([id, day]) => prisma.task.updateMany({ where: { id, userId, ...free }, data: { planDay: day } })));
+  weekPath();
 }
