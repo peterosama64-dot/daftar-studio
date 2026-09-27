@@ -488,3 +488,60 @@ describe("expense categories and budgets", () => {
     expect(pickCategory("", "subscription")).toBe("software");
   });
 });
+
+import { expectedIncome } from "@/lib/forecast";
+import { attentionItems } from "@/lib/attention";
+
+describe("expected income forecast", () => {
+  const t = (over: Partial<import("@/lib/forecast").FcTask>) => ({ id: "t", title: "x", client: "c", agreed: 1000, paid: 0, due: null, status: "doing", recurringId: null, installments: [], ...over });
+  const id = (a: number) => a;
+  it("uses planned payments first, then the rest by due date", () => {
+    const r = expectedIncome([t({ agreed: 3000, paid: 1000, due: new Date(2026, 9, 20), installments: [
+      { amount: 1000, due: new Date(2026, 8, 1), paidAt: new Date(2026, 8, 1) },
+      { amount: 1000, due: new Date(2026, 8, 30), paidAt: null },
+    ] })], [], "2026-09", "2026-10", id);
+    expect(r.totalNow).toBe(1000);
+    expect(r.totalNext).toBe(1000);
+  });
+  it("overdue counts now, far future is ignored, undated is unscheduled", () => {
+    const r = expectedIncome([
+      t({ id: "a", due: new Date(2026, 6, 1) }), t({ id: "b", due: new Date(2027, 0, 1) }), t({ id: "c", due: null, agreed: 500 }), t({ id: "d", agreed: 800, paid: 800 }),
+    ], [], "2026-09", "2026-10", id);
+    expect([r.totalNow, r.totalNext, r.totalUnscheduled]).toEqual([1000, 0, 500]);
+  });
+  it("adds monthly jobs not made yet, clamped to the month's last day", () => {
+    const r = expectedIncome([], [
+      { title: "سوشيال", client: "نون", amount: 3000, dayOfMonth: 31, active: true, lastMonth: "2026-09" },
+      { title: "x", client: "", amount: 100, dayOfMonth: 1, active: false, lastMonth: null },
+    ], "2026-09", "2026-10", id);
+    expect(r.totalNow).toBe(0);
+    expect(r.next[0].date?.getDate()).toBe(31);
+    expect(r.totalNext).toBe(3000);
+  });
+  it("converts with toBase", () => {
+    const r = expectedIncome([t({ due: new Date(2026, 8, 5), agreed: 10 })], [], "2026-09", "2026-10", (a) => a * 50);
+    expect(r.totalNow).toBe(500);
+  });
+});
+
+describe("attention list", () => {
+  const today = new Date(2026, 8, 27, 12);
+  const d = (n: number) => new Date(2026, 8, 27 - n, 10);
+  it("ranks a client's revision request first and hides fresh deliveries", () => {
+    const items = attentionItems({
+      today, fmt: String, overBudget: [],
+      duePayments: [{ id: "p", taskId: "t1", label: "مقدم", title: "لوجو", amount: 500, due: d(0) }],
+      followUps: [{ id: "l", name: "زيتون", nextAt: d(2) }],
+      reviews: [
+        { id: "r1", title: "بوستر", client: "نون", approvedAt: null, lastDelivery: d(5), lastClientRevision: d(1) },
+        { id: "r2", title: "منيو", client: "سكر", approvedAt: null, lastDelivery: d(1), lastClientRevision: null },
+        { id: "r3", title: "كارت", client: "", approvedAt: null, lastDelivery: d(4), lastClientRevision: null },
+        { id: "r4", title: "باكدج", client: "x", approvedAt: d(2), lastDelivery: d(9), lastClientRevision: null },
+      ],
+      doneUnpaid: [{ id: "o", title: "بانر", remaining: 700, doneAt: d(10) }, { id: "o2", title: "جديد", remaining: 100, doneAt: d(2) }],
+    });
+    expect(items.map((x) => x.key)).toEqual(["rev-r1", "pay-p", "lead-l", "owed-o", "wait-r3"]);
+    expect(items[0].text).toBe("نون طلب تعديل في «بوستر» من امبارح");
+    expect(items[2].text).toBe("تابع مع زيتون (متأخر يومين)");
+  });
+});
