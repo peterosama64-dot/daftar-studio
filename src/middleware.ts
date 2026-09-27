@@ -10,13 +10,13 @@ export async function middleware(req: NextRequest) {
   if (req.nextUrl.pathname.startsWith("/api/files/local/")) return NextResponse.next();
   const uid = await verifySession(req.cookies.get(SESSION_COOKIE)?.value);
   if (uid) return NextResponse.next();
-  // Gmail connect/callback (to and from Google) and the Excel download are browser navigations, not fetches.
-  const isNavigation = /^\/api\/(gmail\/(connect|callback)|export)$/.test(req.nextUrl.pathname);
+  // Gmail connect/callback (to and from Google) and the Excel / backup downloads are browser navigations, not fetches.
+  const isNavigation = /^\/api\/(gmail\/(connect|callback)|export|backup)$/.test(req.nextUrl.pathname);
   if (req.nextUrl.pathname.startsWith("/api/") && !isNavigation) {
     return NextResponse.json({ error: "سجّل دخول الأول." }, { status: 401 });
   }
   const url = new URL("/login", req.url);
-  url.searchParams.set("next", req.nextUrl.pathname === "/api/export" ? "/app/settings" : isNavigation ? "/app/inbox" : req.nextUrl.pathname);
+  url.searchParams.set("next", /^\/api\/(export|backup)$/.test(req.nextUrl.pathname) ? "/app/settings" : isNavigation ? "/app/inbox" : req.nextUrl.pathname);
   return NextResponse.redirect(url);
 }
 

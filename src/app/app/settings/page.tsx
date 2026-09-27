@@ -9,6 +9,7 @@ import { aiEnabled, aiName } from "@/lib/ai";
 import { isAdmin } from "@/lib/admin";
 import { NotifyCard } from "@/components/notify-card";
 import { LogoUpload } from "@/components/logo-upload";
+import { BackupCard } from "@/components/backup-card";
 import { setCurrency, setName, setRates, deleteEverything } from "../actions";
 import { parseRates } from "@/lib/fx";
 
@@ -88,6 +89,7 @@ export default async function Settings() {
           <p className="mb-3 text-sm text-muted">كل شغلك وفلوسك واشتراكاتك في ملف واحد، تفتحه بـ Excel أو Google Sheets. خليه نسخة احتياطية أو ابعته للمحاسب.</p>
           <a href="/api/export" download className={btnClass("secondary", true)}>نزّل ملف Excel</a>
         </Card>
+        <BackupCard />
         <Card className="p-5 lg:col-span-2">
           <h2 className="text-lg font-bold">امسح كل بياناتي</h2>
           <p className="mb-3 text-sm text-muted">بيمسح كل المهام والفلوس. المسح نهائي ومش بيرجع. اكتب «امسح» في الخانة عشان تأكد.</p>
