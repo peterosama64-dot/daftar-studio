@@ -6,6 +6,8 @@ import { Button, Card, Empty, btnClass, inputClass } from "@/components/ui";
 import { prisma } from "@/lib/db";
 import { NO_CLIENT, owedByClient } from "@/lib/owed";
 import { RemindButton } from "@/components/remind-button";
+import { ReceiptScan } from "@/components/receipt-scan";
+import { aiEnabled } from "@/lib/ai";
 import { loadMonth, monthFrom, type SP } from "@/lib/data";
 import { monthTotals, fmt } from "@/lib/money";
 import { dayKey, shiftMonth, AR_MONTHS, shortDate, now } from "@/lib/dates";
@@ -108,6 +110,7 @@ export default async function Money({ searchParams }: { searchParams: SP }) {
               <input name="date" type="date" defaultValue={defaultDate} className={inputClass} aria-label="التاريخ" />
               <Button small>ضيف</Button>
             </form>
+            {aiEnabled() && <ReceiptScan defaultDate={defaultDate} />}
           </div>
         </Card>
       </div>

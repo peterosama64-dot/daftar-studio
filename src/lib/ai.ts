@@ -29,7 +29,8 @@ const claude = () => new Anthropic();
 const gemini = () => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, httpOptions: { timeout: 20_000 } });
 
 /** Call Gemini, retrying a busy model once and then moving to the next one. Throws the last error. */
-async function geminiGenerate(contents: string, config: Parameters<GoogleGenAI["models"]["generateContent"]>[0]["config"]) {
+type GeminiArgs = Parameters<GoogleGenAI["models"]["generateContent"]>[0];
+async function geminiGenerate(contents: GeminiArgs["contents"], config: Parameters<GoogleGenAI["models"]["generateContent"]>[0]["config"]) {
   const ai = gemini();
   let last: unknown;
   for (const model of geminiModels()) {
@@ -127,6 +128,57 @@ export async function writeReport(data: unknown): Promise<string | null> {
       return res.text?.trim() || null;
     } catch (e) {
       console.error("writeReport: Gemini error", e instanceof GeminiApiError ? e.status : "", e instanceof Error ? e.message : e);
+      return null;
+    }
+  }
+  return null;
+}
+
+export const ReceiptSchema = z.object({
+  found: z.boolean().describe("false when the photo is not a receipt/invoice or the total can't be read"),
+  name: z.string().describe("short Arabic description of what was bought, e.g. «طباعة بانرات» or the shop name"),
+  amount: z.number().describe("the final total paid, as a plain number"),
+  currency: z.string().describe("ISO code of the total's currency, e.g. EGP, SAR, USD"),
+  date: z.string().describe("YYYY-MM-DD from the receipt, or empty"),
+});
+export type Receipt = z.infer<typeof ReceiptSchema>;
+
+const receiptSystem = (currency: string, today: Date) =>
+  `Read this photo of a receipt or invoice for a freelance designer's expense log. Today is ${dayKey(today)}; default currency ${currency}. ` +
+  `Return the grand total actually paid (after tax/discount), not a line item. Convert Arabic-Indic digits. ` +
+  `If the photo is not a receipt or the total is unreadable, set found=false. Never guess a number.`;
+
+/** Read the total, a short name and the date off a receipt photo. Null when no AI is configured, it fails, or nothing was found. */
+export async function readReceipt(image: Uint8Array, mime: string, currency: string, today = now()): Promise<Receipt | null> {
+  const data = Buffer.from(image).toString("base64");
+  const ok = (r: Receipt | null | undefined) => (r && r.found && r.amount > 0 ? r : null);
+  const provider = aiProvider();
+  if (provider === "claude") {
+    try {
+      const res = await claude().messages.parse({
+        model: CLAUDE_MODEL,
+        max_tokens: 2000,
+        output_config: { effort: "low", format: zodOutputFormat(ReceiptSchema) },
+        system: receiptSystem(currency, today),
+        messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: mime as "image/jpeg", data } }] }],
+      });
+      return ok(res.parsed_output);
+    } catch (e) {
+      if (e instanceof Anthropic.APIError) { console.error("readReceipt: Claude API error", e.status, e.message); return null; }
+      throw e;
+    }
+  }
+  if (provider === "gemini") {
+    try {
+      const res = await geminiGenerate([{ role: "user", parts: [{ inlineData: { mimeType: mime, data } }, { text: "اقرا الإيصال ده." }] }], {
+        systemInstruction: receiptSystem(currency, today),
+        responseMimeType: "application/json",
+        responseJsonSchema: z.toJSONSchema(ReceiptSchema),
+      });
+      const parsed = ReceiptSchema.safeParse(JSON.parse(res.text ?? ""));
+      return parsed.success ? ok(parsed.data) : null;
+    } catch (e) {
+      console.error("readReceipt: Gemini error", e instanceof GeminiApiError ? e.status : "", e instanceof Error ? e.message : e);
       return null;
     }
   }
