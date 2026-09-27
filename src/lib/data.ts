@@ -1,4 +1,4 @@
-import { prisma, getCurrency } from "./db";
+import { prisma, getCurrency, userRow } from "./db";
 import { CURRENCIES } from "./constants";
 import { isMonthKey, monthKey, now } from "./dates";
 import { monthTotals } from "./money";
@@ -35,6 +35,6 @@ export async function loadMonth(month: string, userId: string) {
 
 /** The account's main currency and exchange rates, for converting other-currency jobs and entries. */
 export async function loadFx(userId: string) {
-  const u = await prisma.user.findUnique({ where: { id: userId }, select: { currency: true, fxRates: true } });
+  const u = await userRow(userId);
   return makeFx(u?.currency ?? "EGP", parseRates(u?.fxRates));
 }

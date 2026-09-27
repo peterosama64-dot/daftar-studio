@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
+import { prisma, userRow } from "@/lib/db";
 import { loadFx } from "@/lib/data";
 import { fmt, monthTotals, signed, type EntryLike } from "@/lib/money";
 import { AR_MONTHS, monthKey, shiftMonth, shortDate } from "@/lib/dates";
@@ -19,7 +19,7 @@ export async function HomeInsights({ uid, today, entries, tasks }: { uid: string
   const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
   const [fx, user, duePay, leads, reviews, open, jobs] = await Promise.all([
     loadFx(uid),
-    prisma.user.findUnique({ where: { id: uid }, select: { budgets: true } }),
+    userRow(uid),
     prisma.installment.findMany({ where: { userId: uid, paidAt: null, due: { not: null, lt: endOfToday } }, include: { task: { select: { title: true, currency: true } } }, orderBy: { due: "asc" }, take: 10 }),
     prisma.lead.findMany({ where: { userId: uid, status: { in: ["new", "quoted", "waiting"] }, nextAt: { not: null, lt: endOfToday } }, select: { id: true, name: true, nextAt: true }, take: 10 }),
     prisma.task.findMany({

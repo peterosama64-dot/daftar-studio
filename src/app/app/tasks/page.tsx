@@ -47,10 +47,10 @@ export default async function Tasks({ searchParams }: { searchParams: SP }) {
           </section>
         ))}
       </div>
-      <details className="rounded-2xl border border-dashed border-rule bg-sheet p-4">
+      <details open={sp.new === "1"} className="rounded-2xl border border-dashed border-rule bg-sheet p-4">
         <summary className="cursor-pointer font-semibold text-cyan">＋ ضيف مهمة بإيدك</summary>
         <form action={addTask} className="mt-3 grid gap-2 sm:grid-cols-[2fr_1fr_1fr_1fr_auto]">
-          <input name="title" required placeholder="المهمة" className={inputClass} aria-label="المهمة" />
+          <input name="title" required autoFocus={sp.new === "1"} placeholder="المهمة" className={inputClass} aria-label="المهمة" />
           <input name="client" placeholder="العميل" className={inputClass} aria-label="العميل" />
           <input name="due" type="date" className={inputClass} aria-label="الميعاد" />
           <select name="priority" defaultValue="normal" className={inputClass} aria-label="الأولوية">
