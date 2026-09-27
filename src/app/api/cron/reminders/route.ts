@@ -8,6 +8,9 @@ import { makeFx, parseRates } from "@/lib/fx";
 import { CURRENCIES } from "@/lib/constants";
 import { pushToUser } from "@/lib/push";
 import { runRecurring } from "@/lib/recurring";
+import { mailConfigured, sendMail } from "@/lib/mail";
+import { buildWeekly } from "@/lib/weekly";
+import { weeklyFor } from "@/lib/weekly-data";
 
 export const maxDuration = 60;
 
@@ -74,5 +77,17 @@ export async function GET(req: Request) {
       if (m && (await pushToUser(u.id, { ...m, url: `/app/report?m=${prev}`, tag: "daftar-monthly" })).sent) monthly++;
     }
   }
-  return NextResponse.json({ day: key, users: users.length, sent, quiet, monthly, recurring });
+  // Fridays: the weekly email, for those who turned it on (claimed by date, so never twice).
+  let weekly = 0;
+  if (today.getDay() === 5 && mailConfigured()) {
+    const subs = await prisma.user.findMany({ where: { weeklyEmail: true, suspendedAt: null, OR: [{ lastWeekly: null }, { lastWeekly: { not: key } }] }, select: { id: true } });
+    for (const u of subs) {
+      const claimed = await prisma.user.updateMany({ where: { id: u.id, OR: [{ lastWeekly: null }, { lastWeekly: { not: key } }] }, data: { lastWeekly: key } });
+      if (!claimed.count) continue;
+      const w = await weeklyFor(u.id, today);
+      const mail = w && buildWeekly(w.data);
+      if (w && mail && (await sendMail({ to: w.to, ...mail })).ok) weekly++;
+    }
+  }
+  return NextResponse.json({ day: key, users: users.length, sent, quiet, monthly, recurring, weekly });
 }

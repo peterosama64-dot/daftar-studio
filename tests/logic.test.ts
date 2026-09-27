@@ -545,3 +545,21 @@ describe("attention list", () => {
     expect(items[2].text).toBe("تابع مع زيتون (متأخر يومين)");
   });
 });
+
+import { buildWeekly } from "@/lib/weekly";
+
+describe("weekly email", () => {
+  const base = { name: "بيتر", cur: "ج.م", appUrl: "https://x.app", done: [], income: 0, spent: 0, upcoming: [], duePayments: [], owed: 0, followUps: 0 };
+  it("stays quiet with nothing to say", () => { expect(buildWeekly(base)).toBeNull(); });
+  it("summarises the week and escapes html", () => {
+    const w = buildWeekly({ ...base, done: [{ title: "لوجو <b>", client: "نون" }], income: 5000, spent: 1200,
+      upcoming: [{ title: "منيو", client: "", due: new Date(2026, 9, 2) }], duePayments: [{ label: "مقدم", title: "هوية", amount: 1500, due: new Date(2026, 9, 1) }], owed: 7000, followUps: 2 })!;
+    expect(w.subject).toBe("ملخص أسبوعك: خلصت 1 شغلانة ودخلك 5,000 ج.م");
+    expect(w.text).toContain("الصافي: 3,800 ج.م");
+    expect(w.text).toContain("دفعة «مقدم» من «هوية»: 1,500 ج.م");
+    expect(w.text).toContain("2 عملاء محتملين محتاجين متابعة");
+    expect(w.html).toContain("لوجو &lt;b&gt;");
+    expect(w.html).not.toContain("<b>");
+    expect(w.html).toContain('dir="rtl"');
+  });
+});
