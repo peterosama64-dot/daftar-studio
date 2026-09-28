@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { portalFor } from "@/lib/portal";
 import { curShort } from "@/lib/fx";
-import { invoiceNumber, invoiceTotals, safeFileName } from "@/lib/invoice";
+import { invoiceTotals, safeFileName, shownInvoiceNo } from "@/lib/invoice";
 import { now } from "@/lib/dates";
 import { InvoiceDoc } from "@/components/docs";
 import { PrintButton } from "@/components/print-button";
@@ -16,14 +16,14 @@ export default async function PortalInvoice({ params }: { params: Promise<{ toke
   if (!p) notFound();
   const t = await prisma.task.findFirst({ where: { id, userId: p.userId, client: p.name } });
   if (!t?.agreed) notFound();
-  const no = invoiceNumber(t);
+  const no = shownInvoiceNo(t);
   return (
     <>
       <div className="flex items-center justify-between gap-3 print:hidden">
         <Link href={`/s/c/${token}`} className="text-sm text-cyan">› كل الملف</Link>
         <PrintButton file={safeFileName(`فاتورة-${no}`)} />
       </div>
-      <InvoiceDoc no={no} issued={now()} from={p.user} client={t.client} title={t.title} {...invoiceTotals(t.agreed, t.paid)} cur={curShort(t.currency ?? p.user.currency)} />
+      <InvoiceDoc no={no} issued={t.invoicedAt ?? now()} from={p.user} client={t.client} title={t.title} {...invoiceTotals(t.agreed, t.paid, t.discount, t.taxRate)} cur={curShort(t.currency ?? p.user.currency)} />
     </>
   );
 }

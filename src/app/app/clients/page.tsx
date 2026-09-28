@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/auth";
+import { taskDue } from "@/lib/invoice";
 import Link from "next/link";
 import { PageHead } from "@/components/month";
 import { Card, Empty } from "@/components/ui";
@@ -32,7 +33,7 @@ export default async function Clients() {
     const r = get(t.client);
     if (t.status !== "done") r.open++;
     else if (t.doneAt && (!r.lastDone || t.doneAt > r.lastDone)) r.lastDone = t.doneAt;
-    if (t.agreed) r.owed += fx.toBase(Math.max(0, t.agreed - (t.paid ?? 0)), t.currency);
+    if (t.agreed) r.owed += fx.toBase(Math.max(0, taskDue(t) - (t.paid ?? 0)), t.currency);
   }
   for (const e of income) {
     if (!e.client) continue;

@@ -19,6 +19,7 @@ vi.mock("../src/lib/db", () => {
       user: {
         // Two claims share this mock: the daily digest (lastDigest) and the monthly summary (lastMonthly).
         findMany: async ({ where }: any) => {
+          if (where.autoBackup) return []; // weekly copies: covered in their own test
           const f = where.OR[1].lastDigest ? "lastDigest" : "lastMonthly";
           return [...db.users.values()].filter((u) => db.subs.some((s) => s.userId === u.id) && ((u as any)[f] ?? null) !== where.OR[1][f].not)
             .map((u) => ({ id: u.id, currency: "EGP", incomeGoal: u.incomeGoal ?? null }));

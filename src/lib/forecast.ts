@@ -1,4 +1,5 @@
 import { monthKey } from "./dates";
+import { taskDue } from "./invoice";
 
 export type FcTask = { id: string; title: string; client: string; agreed: number | null; paid: number | null; due: Date | null; status: string; recurringId: string | null; installments: { amount: number; due: Date | null; paidAt: Date | null }[] };
 export type FcJob = { title: string; client: string; amount: number; dayOfMonth: number; active: boolean; lastMonth: string | null };
@@ -20,7 +21,7 @@ export function expectedIncome<T extends FcTask>(tasks: T[], jobs: FcJob[], now:
   };
   for (const t of tasks) {
     if (!t.agreed) continue;
-    const remaining = Math.max(0, t.agreed - (t.paid ?? 0));
+    const remaining = Math.max(0, taskDue(t) - (t.paid ?? 0));
     if (!remaining) continue;
     const planned = t.installments.filter((i) => !i.paidAt);
     let covered = 0;

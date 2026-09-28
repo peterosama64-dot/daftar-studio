@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { taskDue } from "@/lib/invoice";
 import { dayKey, daysUntil, now, shortDate } from "@/lib/dates";
 import { fmt } from "@/lib/money";
 import { installmentSummary } from "@/lib/installments";
@@ -7,12 +8,13 @@ import { InstallmentsEditor } from "./installments-editor";
 import { Button, Card, Pill } from "./ui";
 
 /** The task's payments: deposit, middle, on delivery… each with a date, marked paid as the money comes in. */
-export async function InstallmentsCard({ task, cur }: { task: { id: string; agreed: number | null }; cur: string }) {
+export async function InstallmentsCard({ task, cur }: { task: { id: string; agreed: number | null; discount?: number | null; taxRate?: number | null }; cur: string }) {
   const list = await prisma.installment.findMany({ where: { taskId: task.id }, orderBy: [{ position: "asc" }, { id: "asc" }] });
-  const s = installmentSummary(list, task.agreed);
+  // The plan covers what the client owes in the end: the price after discount and VAT.
+  const s = installmentSummary(list, task.agreed ? taskDue(task) : null);
   const today = now();
   const paidSum = list.filter((x) => x.paidAt).reduce((a, x) => a + x.amount, 0);
-  const left = Math.max(0, (task.agreed ?? 0) - paidSum);
+  const left = Math.max(0, (task.agreed ? taskDue(task) : 0) - paidSum);
   const unpaid = list.filter((x) => !x.paidAt).map((x) => ({ label: x.label, amount: String(x.amount), due: x.due ? dayKey(x.due) : "" }));
   const editor = <InstallmentsEditor key={JSON.stringify([left, unpaid])} action={saveInstallments.bind(null, task.id)} left={left} initial={unpaid} cur={cur} />;
   return (

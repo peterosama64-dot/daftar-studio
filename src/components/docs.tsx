@@ -24,6 +24,7 @@ function Parties({ from, to }: { from: Party; to: string }) {
         {from.name && <span dir="ltr" className="text-right text-sm text-ink2">{from.email}</span>}
         {from.bizPhone && <span dir="ltr" className="text-right text-sm text-ink2">{from.bizPhone}</span>}
         {from.bizAddress && <span className="whitespace-pre-line text-sm text-ink2">{from.bizAddress}</span>}
+        {from.taxNo && <span className="text-sm text-ink2">رقم التسجيل الضريبي: <span className="num">{from.taxNo}</span></span>}
       </div>
       <div className="grid gap-1">
         <span className="text-xs text-muted">إلى</span>
@@ -58,18 +59,19 @@ function Footer({ line }: { line: string }) {
   );
 }
 
-export function InvoiceDoc({ no, issued, from, client, title, total, paid, remaining, cur }: {
-  no: string; issued: Date; from: Party; client: string; title: string; total: number; paid: number; remaining: number; cur: string;
+export function InvoiceDoc({ no, issued, draft, from, client, title, subtotal, discount, taxRate, tax, total, paid, remaining, cur }: {
+  no: string; issued: Date; draft?: boolean; from: Party; client: string; title: string;
+  subtotal: number; discount: number; taxRate: number; tax: number; total: number; paid: number; remaining: number; cur: string;
 }) {
   const row = (k: string, v: number, strong = false) => (
     <div className={`flex justify-between py-1.5 ${strong ? "border-t-2 border-ink pt-2.5 font-bold" : ""}`}>
-      <span className={strong ? "" : "text-muted"}>{k}</span><span className="num">{fmt(v)} {cur}</span>
+      <span className={strong ? "" : "text-muted"}>{k}</span><span className="num">{v < 0 ? "−" : ""}{fmt(Math.abs(v))} {cur}</span>
     </div>
   );
   return (
     <Shell>
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-rule pb-5">
-        <div className="grid gap-2"><Logo from={from} /><h1 className="text-3xl font-extrabold">فاتورة</h1><p className="num text-sm text-muted">{no}</p></div>
+        <div className="grid gap-2"><Logo from={from} /><h1 className="text-3xl font-extrabold">{taxRate ? "فاتورة ضريبية" : "فاتورة"}</h1><p className="num text-sm text-muted">{draft ? "مسودة — لسه من غير رقم" : no}</p></div>
         <div className="grid gap-1 text-sm sm:text-left"><span className="text-muted">تاريخ الإصدار</span><span className="font-semibold">{longDate(issued)}</span></div>
       </header>
       <Parties from={from} to={client} />
@@ -78,10 +80,13 @@ export function InvoiceDoc({ no, issued, from, client, title, total, paid, remai
           <tr className="border-b border-ink text-right text-sm text-muted"><th className="py-2 font-medium">البيان</th><th className="w-40 py-2 text-left font-medium">المبلغ</th></tr>
         </thead>
         <tbody>
-          <tr className="border-b border-rule"><td className="py-3 font-semibold">{title}</td><td className="num py-3 text-left">{fmt(total)} {cur}</td></tr>
+          <tr className="border-b border-rule"><td className="py-3 font-semibold">{title}</td><td className="num py-3 text-left">{fmt(subtotal)} {cur}</td></tr>
         </tbody>
       </table>
       <div className="grid w-full gap-0.5 text-[0.9375rem] sm:mr-auto sm:max-w-xs print:mr-auto print:max-w-xs">
+        {(discount > 0 || tax > 0) && row("المجموع", subtotal)}
+        {discount > 0 && row("الخصم", -discount)}
+        {tax > 0 && row(`ضريبة القيمة المضافة (${taxRate}%)`, tax)}
         {row("الإجمالي", total)}{row("المدفوع", paid)}{row("المتبقي المستحق", remaining, true)}
       </div>
       {remaining === 0 ? <p className="text-center font-semibold text-money">تم سداد الفاتورة بالكامل. شكرًا لكم.</p> : <PayInfo from={from} />}

@@ -10,17 +10,18 @@ import { isAdmin } from "@/lib/admin";
 import { NotifyCard } from "@/components/notify-card";
 import { LogoUpload } from "@/components/logo-upload";
 import { BackupCard } from "@/components/backup-card";
+import { AutoBackupCard } from "@/components/auto-backup-card";
 import { AppearanceCard } from "@/components/appearance-card";
 import { WeeklyEmailCard } from "@/components/weekly-email-card";
 import { mailConfigured } from "@/lib/mail";
-import { setCurrency, setName, setRates, deleteEverything } from "../actions";
+import { setCurrency, setName, setRates, deleteEverything, saveInvoiceSettings } from "../actions";
 import { parseRates } from "@/lib/fx";
 
 export const metadata = { title: "الإعدادات" };
 
 export default async function Settings() {
   const uid = await requireUser();
-  const [cur, user, admin, gmail] = await Promise.all([getCurrency(uid), prisma.user.findUnique({ where: { id: uid }, select: { email: true, name: true, weeklyEmail: true, fxRates: true, logoUrl: true, bizPhone: true, bizAddress: true, payInfo: true } }), isAdmin(uid), prisma.gmailAccount.findUnique({ where: { userId: uid }, select: { id: true } })]);
+  const [cur, user, admin, gmail] = await Promise.all([getCurrency(uid), prisma.user.findUnique({ where: { id: uid }, select: { email: true, name: true, weeklyEmail: true, fxRates: true, logoUrl: true, bizPhone: true, bizAddress: true, payInfo: true, invoicePrefix: true, taxRate: true, taxNo: true, autoBackup: true } }), isAdmin(uid), prisma.gmailAccount.findUnique({ where: { userId: uid }, select: { id: true } })]);
   const row = (name: string, desc: string, right: React.ReactNode) => (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule py-4 last:border-b-0">
       <div className="min-w-0"><div className="font-display font-semibold">{name}</div><p className="text-sm text-muted">{desc}</p></div>
@@ -54,6 +55,16 @@ export default async function Settings() {
               <Button small className="justify-self-start">احفظ</Button>
             </form>
           </div>
+        </Card>
+        <Card className="p-5">
+          <h2 className="mb-1 text-lg font-bold">ترقيم الفواتير والضريبة</h2>
+          <p className="mb-3 text-sm text-muted">كل فاتورة بتعتمدها بتاخد الرقم اللي بعده، ويبدأ من 001 كل سنة. <Link href="/app/invoices" className="text-cyan">سجل الفواتير ‹</Link></p>
+          <form action={saveInvoiceSettings} className="grid gap-3 sm:grid-cols-3">
+            <Field label="بداية الرقم"><input name="invoicePrefix" defaultValue={user?.invoicePrefix ?? "INV"} maxLength={12} dir="ltr" className={`${inputClass} text-left`} /></Field>
+            <Field label="ضريبة القيمة المضافة %"><input name="taxRate" defaultValue={user?.taxRate ?? ""} inputMode="decimal" placeholder="مفيش" className={`${inputClass} num text-left`} /></Field>
+            <Field label="رقم التسجيل الضريبي"><input name="taxNo" defaultValue={user?.taxNo ?? ""} maxLength={40} dir="ltr" className={`${inputClass} text-left`} /></Field>
+            <Button small className="justify-self-start">احفظ</Button>
+          </form>
         </Card>
         <Card className="p-5">
           <h2 className="mb-2 text-lg font-bold">العملة</h2>
@@ -95,6 +106,7 @@ export default async function Settings() {
           <a href="/api/export" download className={btnClass("secondary", true)}>نزّل ملف Excel</a>
         </Card>
         <BackupCard />
+        <AutoBackupCard uid={uid} on={user?.autoBackup ?? true} />
         <Card className="p-5 lg:col-span-2">
           <h2 className="text-lg font-bold">امسح كل بياناتي</h2>
           <p className="mb-3 text-sm text-muted">بيمسح كل المهام والفلوس. المسح نهائي ومش بيرجع. اكتب «امسح» في الخانة عشان تأكد.</p>

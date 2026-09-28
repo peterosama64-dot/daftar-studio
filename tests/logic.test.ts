@@ -139,9 +139,9 @@ describe("invoice", () => {
     expect(invoiceNumber({ id: "cmabc123xyz9", createdAt: new Date(2026, 8, 5) })).toBe("INV-202609-XYZ9");
   });
   it("caps paid at the total and never owes a negative", () => {
-    expect(invoiceTotals(3000, 1000)).toEqual({ total: 3000, paid: 1000, remaining: 2000 });
-    expect(invoiceTotals(3000, 5000)).toEqual({ total: 3000, paid: 3000, remaining: 0 });
-    expect(invoiceTotals(3000, null)).toEqual({ total: 3000, paid: 0, remaining: 3000 });
+    expect(invoiceTotals(3000, 1000)).toMatchObject({ total: 3000, paid: 1000, remaining: 2000 });
+    expect(invoiceTotals(3000, 5000)).toMatchObject({ total: 3000, paid: 3000, remaining: 0 });
+    expect(invoiceTotals(3000, null)).toMatchObject({ total: 3000, paid: 0, remaining: 3000 });
   });
   it("makes safe file names", () => {
     expect(safeFileName('فاتورة-كافيه نون/فرع 2-INV:1')).toBe("فاتورة-كافيه-نون-فرع-2-INV-1");

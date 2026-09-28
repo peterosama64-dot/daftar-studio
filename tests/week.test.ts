@@ -103,3 +103,25 @@ describe("waiting on clients", () => {
     expect(t).toBe("أهلاً يا سكر 👋\n\nحبيت أطمن إن شغل «لوجو» وصلك تمام.\nلو في أي ملاحظات أو تعديلات قولّي، ولو كله تمام تقدر توافق عليه من هنا:\nhttps://x/s/r/abc\n\nمستني ردّك 🙏\nبيتر");
   });
 });
+
+import { formatInvoiceNo, invoiceTotals, taskDue } from "../src/lib/invoice";
+import { owedByClient } from "../src/lib/owed";
+
+describe("invoices", () => {
+  it("numbers per year with at least 3 digits", () => {
+    expect(formatInvoiceNo("INV", 2026, 1)).toBe("INV-2026-001");
+    expect(formatInvoiceNo("ST", 2026, 1234)).toBe("ST-2026-1234");
+    expect(formatInvoiceNo("", 2027, 12)).toBe("INV-2027-012");
+  });
+  it("takes the discount off, then adds VAT, then subtracts what was paid", () => {
+    expect(invoiceTotals(10000, 2000, 1000, 14)).toEqual({ subtotal: 10000, discount: 1000, taxRate: 14, tax: 1260, total: 10260, paid: 2000, remaining: 8260 });
+    expect(invoiceTotals(1000, 5000, null, null)).toMatchObject({ total: 1000, paid: 1000, remaining: 0 });
+    expect(invoiceTotals(1000, 0, 5000, 5)).toMatchObject({ discount: 1000, tax: 0, total: 0 });
+    expect(invoiceTotals(333.33, 0, null, 15).tax).toBe(50);
+  });
+  it("what a client owes counts the discount and VAT", () => {
+    expect(taskDue({ agreed: 10000, discount: 1000, taxRate: 14 })).toBe(10260);
+    const o = owedByClient([{ id: "a", title: "لوجو", client: "نون", agreed: 10000, paid: 10000, discount: null, taxRate: 14 }]);
+    expect(o.total).toBe(1400);
+  });
+});
