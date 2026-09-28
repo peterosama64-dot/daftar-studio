@@ -23,7 +23,7 @@ export async function weeklyFor(userId: string, today: Date): Promise<{ to: stri
     prisma.entry.findMany({ where: { userId } }),
     prisma.task.findMany({ where: { userId, status: { not: "done" }, due: { gte: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1), lt: end } }, select: { title: true, client: true, due: true }, orderBy: { due: "asc" }, take: 15 }),
     prisma.installment.findMany({ where: { userId, paidAt: null, due: { lt: end } }, include: { task: { select: { title: true, currency: true } } }, orderBy: { due: "asc" }, take: 15 }),
-    prisma.task.findMany({ where: { userId, agreed: { gt: 0 } }, select: { id: true, title: true, client: true, agreed: true, paid: true, currency: true } }),
+    prisma.task.findMany({ where: { userId, agreed: { gt: 0 } }, select: { id: true, title: true, client: true, agreed: true, paid: true, discount: true, taxRate: true, currency: true } }),
     prisma.lead.count({ where: { userId, status: { in: ["new", "quoted", "waiting"] }, nextAt: { lt: end } } }),
   ]);
   const inWeek = (d: Date | null) => !!d && d >= start && d.getTime() < start.getTime() + 7 * DAY;

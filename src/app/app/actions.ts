@@ -24,6 +24,8 @@ import { buildWeekly } from "@/lib/weekly";
 import { weeklyFor } from "@/lib/weekly-data";
 import { draftContract } from "@/lib/contract";
 import type { ReminderData } from "@/lib/remind";
+import { formatInvoiceNo, taskDue } from "@/lib/invoice";
+import { makeAutoBackup } from "@/lib/auto-backup";
 import { autoPlan, weekStart } from "@/lib/week";
 
 const done = () => revalidatePath("/app", "layout");
@@ -116,11 +118,12 @@ export async function collectRemaining(id: string) {
   const userId = await requireUser();
   const [t, fx] = await Promise.all([prisma.task.findFirst({ where: { id, userId } }), loadFx(userId)]);
   if (!t?.agreed) return;
-  const remaining = t.agreed - (t.paid ?? 0);
+  const due = taskDue(t);
+  const remaining = due - (t.paid ?? 0);
   if (remaining <= 0) return;
   // Only the request that still sees the old «paid» wins, so a double tap never records the income twice.
   await prisma.$transaction(async (tx) => {
-    const claimed = await tx.task.updateMany({ where: { id, userId, paid: t.paid }, data: { paid: t.agreed } });
+    const claimed = await tx.task.updateMany({ where: { id, userId, paid: t.paid }, data: { paid: due } });
     if (!claimed.count) return;
     await tx.entry.create({ data: { userId, kind: "income", name: t.title.slice(0, 120), client: t.client, date: now(), ...incomeFrom(fx, remaining, t.currency) } });
     // Whatever payments were still planned are covered by this one.
@@ -320,6 +323,7 @@ export async function unshareQuote(id: string) {
 }
 export async function shareInvoice(id: string) {
   const userId = await requireUser();
+  await issueNo(userId, id);
   await prisma.task.updateMany({ where: { id, userId, shareToken: null }, data: { shareToken: newToken() } });
   revalidatePath(`/app/tasks/${id}/invoice`);
 }
@@ -492,9 +496,10 @@ export async function prepareReminder(client: string): Promise<ReminderData | nu
   const name = client.trim().slice(0, 80);
   if (!name) return null;
   const owing = await prisma.task.findMany({ where: { userId, client: name, agreed: { gt: 0 } }, orderBy: { createdAt: "asc" } });
-  const tasks = owing.filter((t) => (t.agreed ?? 0) > (t.paid ?? 0));
+  const tasks = owing.filter((t) => taskDue(t) > (t.paid ?? 0));
   if (!tasks.length) return null;
   // Only fills a missing token, so a link the client already has keeps working.
+  for (const t of tasks.filter((x) => !x.shareToken)) await issueNo(userId, t.id);
   await Promise.all(tasks.filter((t) => !t.shareToken).map((t) =>
     prisma.task.updateMany({ where: { id: t.id, userId, shareToken: null }, data: { shareToken: newToken() } })));
   const [fresh, user, info, fx] = await Promise.all([
@@ -506,7 +511,7 @@ export async function prepareReminder(client: string): Promise<ReminderData | nu
   const token = new Map(fresh.map((t) => [t.id, t.shareToken]));
   const codes = new Set(tasks.map((t) => fx.of(t.currency)));
   const one = codes.size === 1 ? [...codes][0] : fx.base;
-  const rem = (t: (typeof tasks)[number]) => (t.agreed ?? 0) - (t.paid ?? 0);
+  const rem = (t: (typeof tasks)[number]) => taskDue(t) - (t.paid ?? 0);
   return {
     client: name,
     sender: user?.name ?? "",
@@ -928,4 +933,66 @@ export async function unshareCalendar() {
   const userId = await requireUser();
   await prisma.user.updateMany({ where: { id: userId }, data: { calendarToken: null } });
   revalidatePath("/app/meetings");
+}
+
+// ---------- invoices ----------
+/**
+ * Gives a task's invoice the next number of the year (INV-2026-001), once. The user row is locked by the
+ * counter update, and the task only takes a number if it has none, so two taps (or two tabs) never produce
+ * two numbers or a gap: the loser's transaction rolls back, counter included.
+ */
+async function issueNo(userId: string, taskId: string) {
+  const year = now().getFullYear();
+  try {
+    await prisma.$transaction(async (tx) => {
+      const t = await tx.task.findFirst({ where: { id: taskId, userId }, select: { invoiceNo: true, agreed: true } });
+      if (!t || t.invoiceNo || !t.agreed) return;
+      const [u] = await tx.$queryRaw<{ invoiceSeq: number; invoicePrefix: string }[]>`
+        UPDATE "User" SET "invoiceSeq" = CASE WHEN "invoiceYear" = ${year} THEN "invoiceSeq" + 1 ELSE 1 END, "invoiceYear" = ${year}
+        WHERE "id" = ${userId} RETURNING "invoiceSeq", "invoicePrefix"`;
+      const got = await tx.task.updateMany({ where: { id: taskId, userId, invoiceNo: null }, data: { invoiceNo: formatInvoiceNo(u.invoicePrefix, year, u.invoiceSeq), invoicedAt: now() } });
+      if (!got.count) throw new Error("already-issued");
+    });
+  } catch (e) {
+    if (!(e instanceof Error && e.message === "already-issued")) throw e;
+  }
+}
+
+/** «اعتمد الفاتورة»: gives it its number and date. */
+export async function issueInvoice(taskId: string) {
+  const userId = await requireUser();
+  await issueNo(userId, taskId);
+  revalidatePath(`/app/tasks/${taskId}/invoice`); revalidatePath("/app/invoices");
+}
+
+/** Discount (amount) and VAT (%) for one invoice. They change what the client owes, everywhere in the app. */
+export async function setInvoiceTerms(taskId: string, f: FormData) {
+  const userId = await requireUser();
+  const rate = num(f, "taxRate");
+  await prisma.task.updateMany({ where: { id: taskId, userId }, data: { discount: num(f, "discount") || null, taxRate: rate ? Math.min(100, rate) : null } });
+  done();
+}
+
+export async function saveInvoiceSettings(f: FormData) {
+  const userId = await requireUser();
+  const prefix = str(f, "invoicePrefix", 12).replace(/[^A-Za-z0-9\u0600-\u06FF-]/g, "") || "INV";
+  const rate = num(f, "taxRate");
+  await prisma.user.updateMany({ where: { id: userId }, data: { invoicePrefix: prefix, taxRate: rate ? Math.min(100, rate) : null, taxNo: str(f, "taxNo", 40) } });
+  revalidatePath("/app/settings"); revalidatePath("/app/invoices");
+}
+
+// ---------- automatic backups ----------
+export async function setAutoBackup(on: boolean) {
+  const userId = await requireUser();
+  await prisma.user.updateMany({ where: { id: userId }, data: { autoBackup: on } });
+  revalidatePath("/app/settings");
+}
+
+/** «اعمل نسخة دلوقتي»: at most one every 10 minutes. */
+export async function backupNow() {
+  const userId = await requireUser();
+  const last = await prisma.autoBackup.findFirst({ where: { userId }, orderBy: { createdAt: "desc" }, select: { createdAt: true } });
+  if (last && Date.now() - last.createdAt.getTime() < 10 * 60_000) return;
+  await makeAutoBackup(userId, now());
+  revalidatePath("/app/settings");
 }

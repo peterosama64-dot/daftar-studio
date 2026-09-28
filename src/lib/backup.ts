@@ -14,7 +14,7 @@ export const BACKUP_VERSION = 1;
 
 export async function buildBackup(userId: string) {
   const [user, tasks, entries, quotes, recurring, clients, templates, meetings] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { name: true, currency: true, fxRates: true, budgets: true, incomeGoal: true, logoUrl: true, bizPhone: true, bizAddress: true, payInfo: true, dayHours: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { name: true, currency: true, fxRates: true, budgets: true, incomeGoal: true, logoUrl: true, bizPhone: true, bizAddress: true, payInfo: true, dayHours: true, invoicePrefix: true, invoiceYear: true, invoiceSeq: true, taxRate: true, taxNo: true, autoBackup: true } }),
     prisma.task.findMany({
       where: { userId }, orderBy: { createdAt: "asc" },
       include: {
@@ -40,6 +40,7 @@ export async function buildBackup(userId: string) {
       agreed: t.agreed, paid: t.paid, currency: t.currency, doneAt: t.doneAt, timeSpent: t.timeSpent, recurringRef: t.recurringId,
       revisionsAllowed: t.revisionsAllowed, approvedAt: t.approvedAt, createdAt: t.createdAt,
       rating: t.rating, ratingNote: t.ratingNote, ratedAt: t.ratedAt, showcase: t.showcase, planDay: t.planDay, estimate: t.estimate,
+      invoiceNo: t.invoiceNo, invoicedAt: t.invoicedAt, discount: t.discount, taxRate: t.taxRate,
       contract: t.contract, subtasks: t.subtasks, installments: t.installments.map(({ entryId, ...x }) => ({ ...x, entryRef: entryId })), revisions: t.revisions, deliveries: t.deliveries,
     })),
     entries: entries.map((e) => ({
@@ -73,6 +74,8 @@ export const BackupSchema = z.object({
     logoUrl: z.string().max(500).refine((u) => /^https:\/\//.test(u) || u.startsWith("/api/files/local/")).nullable().default(null),
     bizPhone: s(40).default(""), bizAddress: s(200).default(""), payInfo: s(600).default(""),
     dayHours: z.number().int().min(1).max(16).default(6),
+    invoicePrefix: s(12).default("INV"), invoiceYear: z.number().int().min(2000).max(3000).nullable().default(null), invoiceSeq: z.number().int().min(0).max(1e6).default(0),
+    taxRate: z.number().min(0).max(100).nullable().default(null), taxNo: s(40).default(""), autoBackup: z.boolean().default(true),
   }).nullable().default(null),
   tasks: arr(z.object({
     ref: s(64), title: s(200).min(1), client: s(80).default(""), due: optDate,
@@ -83,6 +86,8 @@ export const BackupSchema = z.object({
     approvedAt: optDate, createdAt: date,
     rating: z.number().int().min(1).max(5).nullable().optional().transform((v) => v ?? null), ratingNote: s(600).nullable().optional().transform((v) => v ?? null), ratedAt: optDate, showcase: z.boolean().default(false),
     planDay: optDate, estimate: z.number().int().min(1).max(1440).nullable().optional().transform((v) => v ?? null),
+    invoiceNo: s(40).nullable().optional().transform((v) => v ?? null), invoicedAt: optDate,
+    discount: money.nullable().optional().transform((v) => v ?? null), taxRate: z.number().min(0).max(100).nullable().optional().transform((v) => v ?? null),
     subtasks: arr(z.object({ title: s(200).min(1), done: z.boolean().default(false), position: z.number().int().default(0) }), 60),
     installments: arr(z.object({ label: s(60), amount: money, due: optDate, paidAt: optDate, entryRef: ref, position: z.number().int().default(0) }), 12),
     revisions: arr(z.object({ note: s(1000).default(""), by: z.enum(["owner", "client"]).default("owner"), createdAt: date }), 50),
@@ -137,6 +142,7 @@ export async function restoreBackup(userId: string, b: Backup) {
         agreed: t.agreed, paid: t.paid, currency: t.currency, doneAt: t.doneAt, timeSpent: t.timeSpent,
         revisionsAllowed: t.revisionsAllowed, approvedAt: t.approvedAt, createdAt: t.createdAt,
         rating: t.rating, ratingNote: t.ratingNote, ratedAt: t.ratedAt, showcase: t.showcase, planDay: t.planDay, estimate: t.estimate,
+        invoiceNo: t.invoiceNo, invoicedAt: t.invoicedAt, discount: t.discount, taxRate: t.taxRate,
         id: taskIds.get(t.ref)!, userId, recurringId: t.recurringRef ? jobIds.get(t.recurringRef) ?? null : null,
       })),
     });

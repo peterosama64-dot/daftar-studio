@@ -13,40 +13,48 @@ datasource db {
 }
 
 model User {
-  id            String             @id @default(cuid())
-  email         String             @unique
-  name          String             @default("")
-  passwordHash  String
-  currency      String             @default("EGP")
-  createdAt     DateTime           @default(now())
-  tasks         Task[]
-  entries       Entry[]
-  gmail         GmailAccount?
-  push          PushSubscription[]
-  lastDigest    String? // "YYYY-MM-DD" of the last morning reminder, so the daily job never sends twice
-  lastMonthly   String? // "YYYY-MM" of the last month-summary notification
-  dayHours      Int                @default(6) // hours of work a day the week plan fills up to
-  calendarToken String?            @unique // private iCal feed link (Google / Apple Calendar subscribe to it)
-  incomeGoal    Float? // monthly income target, shown on the home page
-  suspendedAt   DateTime? // set by an admin: can't sign in, no reminders, shared links stop working
-  lastSeenAt    DateTime? // updated at most hourly, for the admin's activity numbers
-  quotes        Quote[]
-  recurring     RecurringJob[]
-  clientInfos   ClientInfo[]
-  syncedOps     SyncedOp[]
-  templates     TaskTemplate[]
+  id             String             @id @default(cuid())
+  email          String             @unique
+  name           String             @default("")
+  passwordHash   String
+  currency       String             @default("EGP")
+  createdAt      DateTime           @default(now())
+  tasks          Task[]
+  entries        Entry[]
+  gmail          GmailAccount?
+  push           PushSubscription[]
+  lastDigest     String? // "YYYY-MM-DD" of the last morning reminder, so the daily job never sends twice
+  lastMonthly    String? // "YYYY-MM" of the last month-summary notification
+  dayHours       Int                @default(6) // hours of work a day the week plan fills up to
+  calendarToken  String?            @unique // private iCal feed link (Google / Apple Calendar subscribe to it)
+  invoicePrefix  String             @default("INV")
+  invoiceYear    Int? // the year invoiceSeq counts in; numbering restarts at 001 each year
+  invoiceSeq     Int                @default(0) // last invoice number given in invoiceYear
+  taxRate        Float? // default VAT % for new invoices
+  taxNo          String             @default("") // tax registration number printed on invoices
+  autoBackup     Boolean            @default(true) // keep a weekly copy of the notebook (AutoBackup)
+  lastAutoBackup String? // "YYYY-MM-DD" of the last weekly copy
+  autoBackups    AutoBackup[]
+  incomeGoal     Float? // monthly income target, shown on the home page
+  suspendedAt    DateTime? // set by an admin: can't sign in, no reminders, shared links stop working
+  lastSeenAt     DateTime? // updated at most hourly, for the admin's activity numbers
+  quotes         Quote[]
+  recurring      RecurringJob[]
+  clientInfos    ClientInfo[]
+  syncedOps      SyncedOp[]
+  templates      TaskTemplate[]
   // Shown on invoices and quotes
-  logoUrl       String?
-  bizPhone      String             @default("")
-  bizAddress    String             @default("")
-  payInfo       String             @default("") // how to pay: InstaPay, wallet, bank account…
-  fxRates       String             @default("{}") // JSON {"USD": 48.5}: 1 unit = this many of the main currency
-  leads         Lead[]
-  meetings      Meeting[]
-  budgets       String             @default("{}") // JSON {"print": 500}: monthly spending limit per expense category
-  weeklyEmail   Boolean            @default(false) // Friday summary by email
-  lastWeekly    String? // "YYYY-MM-DD" of the last weekly email, so a week is never sent twice
-  reviewsToken  String?            @unique // public page of chosen client reviews
+  logoUrl        String?
+  bizPhone       String             @default("")
+  bizAddress     String             @default("")
+  payInfo        String             @default("") // how to pay: InstaPay, wallet, bank account…
+  fxRates        String             @default("{}") // JSON {"USD": 48.5}: 1 unit = this many of the main currency
+  leads          Lead[]
+  meetings       Meeting[]
+  budgets        String             @default("{}") // JSON {"print": 500}: monthly spending limit per expense category
+  weeklyEmail    Boolean            @default(false) // Friday summary by email
+  lastWeekly     String? // "YYYY-MM-DD" of the last weekly email, so a week is never sent twice
+  reviewsToken   String?            @unique // public page of chosen client reviews
 }
 
 model Task {
@@ -85,7 +93,12 @@ model Task {
   planDay          DateTime? // the day of the week plan this job is placed on (local midnight)
   estimate         Int? // estimated minutes of work, for the week plan
   nudgedAt         DateTime? // last follow-up sent to the client about delivered work awaiting their reply
+  invoiceNo        String? // sequential number (INV-2026-001), given once when the invoice is issued; never reused
+  invoicedAt       DateTime? // issue date printed on the invoice
+  discount         Float? // taken off the agreed price, in the task's currency
+  taxRate          Float? // VAT % added after the discount (e.g. 14, 5, 15)
 
+  @@unique([userId, invoiceNo])
   @@index([userId, status])
 }
 
@@ -328,4 +341,16 @@ model Meeting {
 
   @@index([userId, at])
   @@index([at])
+}
+
+// Weekly automatic copies of a notebook (the same JSON as «نسخة احتياطية», gzipped). The last 4 are kept.
+model AutoBackup {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  size      Int // bytes of the JSON before compression
+  data      Bytes
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }

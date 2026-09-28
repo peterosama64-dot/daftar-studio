@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { taskDue } from "@/lib/invoice";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { portalFor } from "@/lib/portal";
@@ -20,7 +21,7 @@ export default async function Portal({ params }: { params: Promise<{ token: stri
     prisma.quote.findMany({ where, orderBy: { createdAt: "desc" } }),
     prisma.task.findMany({
       where, orderBy: { createdAt: "desc" },
-      select: { id: true, title: true, status: true, agreed: true, paid: true, currency: true, due: true, reviewToken: true, approvedAt: true, contract: { select: { shareToken: true, acceptedAt: true } }, installments: { orderBy: [{ position: "asc" }, { id: "asc" }], select: { label: true, amount: true, due: true, paidAt: true } } },
+      select: { id: true, title: true, status: true, agreed: true, paid: true, discount: true, taxRate: true, currency: true, due: true, reviewToken: true, approvedAt: true, contract: { select: { shareToken: true, acceptedAt: true } }, installments: { orderBy: [{ position: "asc" }, { id: "asc" }], select: { label: true, amount: true, due: true, paidAt: true } } },
     }),
   ]);
   const billed = tasks.filter((t) => t.agreed);
@@ -29,8 +30,8 @@ export default async function Portal({ params }: { params: Promise<{ token: stri
   const codes = new Set(billed.map((t) => fx.of(t.currency)));
   const mixed = codes.size > 1;
   const conv = (a: number, c: string | null) => (mixed ? fx.toBase(a, c) : a);
-  const total = billed.reduce((s, t) => s + conv(t.agreed ?? 0, t.currency), 0);
-  const paid = billed.reduce((s, t) => s + conv(Math.min(t.paid ?? 0, t.agreed ?? 0), t.currency), 0);
+  const total = billed.reduce((s, t) => s + conv(taskDue(t), t.currency), 0);
+  const paid = billed.reduce((s, t) => s + conv(Math.min(t.paid ?? 0, taskDue(t)), t.currency), 0);
   const cur = fx.short(mixed ? fx.base : [...codes][0]);
   const tcur = (c: string | null) => (mixed ? ` ${fx.short(c)}` : "");
   const from = p.user.name || p.user.email;
@@ -53,7 +54,7 @@ export default async function Portal({ params }: { params: Promise<{ token: stri
         <Card className="p-5">
           <h2 className="mb-2 text-lg font-bold">الفواتير</h2>
           <ul>{billed.map((t) => {
-            const rem = Math.max(0, (t.agreed ?? 0) - (t.paid ?? 0));
+            const rem = Math.max(0, taskDue(t) - (t.paid ?? 0));
             return (
               <li key={t.id} className="grid gap-1.5 border-b border-rule py-3 last:border-b-0">
                 <div className="flex flex-wrap items-center gap-2">

@@ -12,6 +12,7 @@ import { mailConfigured, sendMail } from "@/lib/mail";
 import { buildWeekly } from "@/lib/weekly";
 import { weeklyFor } from "@/lib/weekly-data";
 import { loadWaiting } from "@/lib/waiting-data";
+import { runAutoBackups } from "@/lib/auto-backup";
 import { waitingDigest, waitingList } from "@/lib/waiting";
 
 export const maxDuration = 60;
@@ -45,7 +46,7 @@ export async function GET(req: Request) {
     });
     // Money owed only goes into Sunday's reminder, so only read it then.
     const owed = today.getDay() === 0
-      ? owedByClient(await prisma.task.findMany({ where: { userId: u.id, agreed: { gt: 0 } }, select: { id: true, title: true, client: true, agreed: true, paid: true, currency: true } }), makeFx(u.currency, parseRates(u.fxRates)).toBase)
+      ? owedByClient(await prisma.task.findMany({ where: { userId: u.id, agreed: { gt: 0 } }, select: { id: true, title: true, client: true, agreed: true, paid: true, discount: true, taxRate: true, currency: true } }), makeFx(u.currency, parseRates(u.fxRates)).toBase)
       : null;
     const currency = CURRENCIES.find((c) => c.code === u.currency)?.short ?? "ج.م";
     const dues = (await prisma.installment.findMany({
@@ -96,5 +97,7 @@ export async function GET(req: Request) {
       if (w && mail && (await sendMail({ to: w.to, ...mail })).ok) weekly++;
     }
   }
-  return NextResponse.json({ day: key, users: users.length, sent, quiet, monthly, recurring, weekly });
+  // Weekly copies of every notebook, last so a slow run never delays the reminders.
+  const backups = await runAutoBackups(today);
+  return NextResponse.json({ day: key, users: users.length, sent, quiet, monthly, recurring, weekly, backups });
 }

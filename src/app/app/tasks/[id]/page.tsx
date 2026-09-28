@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/auth";
+import { taskDue } from "@/lib/invoice";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
@@ -20,7 +21,8 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
   const [t, fx] = await Promise.all([prisma.task.findFirst({ where: { id, userId: uid } }), loadFx(uid)]);
   if (!t) notFound();
   const cur = { short: fx.short(t.currency) };
-  const paidPct = t.agreed ? Math.min(100, ((t.paid ?? 0) / t.agreed) * 100) : 0;
+  const due = taskDue(t);
+  const paidPct = due ? Math.min(100, ((t.paid ?? 0) / due) * 100) : 0;
   return (
     <>
       <Link href="/app/tasks" className="text-sm text-cyan">› رجوع للشغل</Link>
@@ -61,7 +63,8 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
           </div>
           {t.agreed ? (
             <div className="grid gap-1.5">
-              <div className="flex justify-between text-sm"><span className="text-muted">اتدفع</span><span className="num text-money">{fmt(t.paid ?? 0)} / {fmt(t.agreed)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted">اتدفع</span><span className="num text-money">{fmt(t.paid ?? 0)} / {fmt(due)}</span></div>
+              {due !== t.agreed && <p className="text-[0.8125rem] text-muted">المستحق {fmt(due)} {cur.short} بعد {t.discount ? "الخصم" : ""}{t.discount && t.taxRate ? " و" : ""}{t.taxRate ? `ضريبة ${t.taxRate}%` : ""} (من الفاتورة).</p>}
               <div className="h-2 overflow-hidden rounded bg-paper"><div className="h-full bg-money" style={{ width: `${paidPct}%` }} /></div>
             </div>
           ) : null}

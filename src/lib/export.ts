@@ -1,4 +1,5 @@
 import { dayKey } from "./dates";
+import { taskDue } from "./invoice";
 import type { Sheet } from "./xlsx";
 import { categoryLabel } from "./categories";
 
@@ -19,7 +20,7 @@ export function exportSheets(tasks: T[], entries: E[], currency: string): Sheet[
       rows: [
         ["المهمة", "العميل", "الحالة", "الأولوية", "الميعاد", "خلصت يوم", `المتفق عليه (${currency})`, `اتدفع (${currency})`, `الباقي (${currency})`, "ملاحظات", "اتسجلت يوم", "العملة لو مختلفة"],
         ...tasks.map((t) => [t.title, t.client, STATUS[t.status] ?? t.status, PRIORITY[t.priority] ?? t.priority, day(t.due), day(t.doneAt),
-          t.agreed ?? null, t.paid ?? null, t.agreed ? Math.max(0, t.agreed - (t.paid ?? 0)) : null, t.notes, day(t.createdAt), t.currency ?? ""]),
+          t.agreed ?? null, t.paid ?? null, t.agreed ? Math.max(0, taskDue(t) - (t.paid ?? 0)) : null, t.notes, day(t.createdAt), t.currency ?? ""]),
       ],
     },
     {

@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element -- delivered files come from Blob storage */
 import Link from "next/link";
+import { taskDue } from "@/lib/invoice";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -38,7 +39,7 @@ export default async function ClientPage({ params }: { params: Promise<{ name: s
   const year = now().getFullYear();
   const total = income.reduce((s, e) => s + e.amount, 0);
   const thisYear = income.filter((e) => e.date && e.date.getFullYear() === year).reduce((s, e) => s + e.amount, 0);
-  const owed = tasks.reduce((s, t) => s + (t.agreed ? fx.toBase(Math.max(0, t.agreed - (t.paid ?? 0)), t.currency) : 0), 0);
+  const owed = tasks.reduce((s, t) => s + (t.agreed ? fx.toBase(Math.max(0, taskDue(t) - (t.paid ?? 0)), t.currency) : 0), 0);
   const open = tasks.filter((t) => t.status !== "done");
   const rate = rateReport(tasks.map((t) => ({ ...t, agreed: t.agreed === null ? null : fx.toBase(t.agreed, t.currency) })));
   const wa = info?.phone ? whatsappLink(info.phone) : null;
@@ -77,7 +78,7 @@ export default async function ClientPage({ params }: { params: Promise<{ name: s
             <h2 className="mb-2 text-lg font-bold">الشغل</h2>
             {tasks.length ? (
               <ul>{tasks.map((t) => {
-                const rem = t.agreed ? Math.max(0, t.agreed - (t.paid ?? 0)) : 0;
+                const rem = t.agreed ? Math.max(0, taskDue(t) - (t.paid ?? 0)) : 0;
                 const steps = t.subtasks.length ? `${t.subtasks.filter((x) => x.done).length}/${t.subtasks.length}` : "";
                 return (
                   <li key={t.id} className="flex flex-wrap items-center gap-2 border-b border-rule py-2.5 last:border-b-0">

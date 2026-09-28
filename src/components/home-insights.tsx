@@ -6,6 +6,7 @@ import { AR_MONTHS, monthKey, shiftMonth, shortDate } from "@/lib/dates";
 import { expectedIncome } from "@/lib/forecast";
 import { attentionItems } from "@/lib/attention";
 import { loadWaiting } from "@/lib/waiting-data";
+import { taskDue } from "@/lib/invoice";
 import { WAIT_DAYS, waitingList } from "@/lib/waiting";
 import { parseBudgets, spendByCategory } from "@/lib/categories";
 import { Card, Pill, SectionHead } from "./ui";
@@ -31,7 +32,7 @@ export async function HomeInsights({ uid, today, entries, tasks }: { uid: string
     }),
     prisma.task.findMany({
       where: { userId: uid, agreed: { gt: 0 } },
-      select: { id: true, title: true, client: true, agreed: true, paid: true, due: true, status: true, recurringId: true, currency: true, installments: { select: { amount: true, due: true, paidAt: true }, orderBy: { position: "asc" } } },
+      select: { id: true, title: true, client: true, agreed: true, paid: true, discount: true, taxRate: true, due: true, status: true, recurringId: true, currency: true, installments: { select: { amount: true, due: true, paidAt: true }, orderBy: { position: "asc" } } },
     }),
     prisma.recurringJob.findMany({ where: { userId: uid, active: true } }),
     prisma.meeting.findMany({ where: { userId: uid, at: { gte: today, lt: endOfToday } }, select: { id: true, title: true, client: true, at: true }, orderBy: { at: "asc" }, take: 5 }),
@@ -42,8 +43,8 @@ export async function HomeInsights({ uid, today, entries, tasks }: { uid: string
     duePayments: duePay.map((p) => ({ id: p.id, taskId: p.taskId, label: p.label, title: p.task.title, amount: fx.toBase(p.amount, p.task.currency), due: p.due! })),
     followUps: leads.map((l) => ({ id: l.id, name: l.name, nextAt: l.nextAt! })),
     reviews: reviews.map((r) => ({ id: r.id, title: r.title, client: r.client, approvedAt: r.approvedAt, lastDelivery: r.deliveries[0]?.createdAt ?? null, lastClientRevision: r.revisions[0]?.createdAt ?? null, nudgedAt: r.nudgedAt })),
-    doneUnpaid: tasks.filter((t) => t.status === "done" && t.doneAt && t.agreed && t.agreed > (t.paid ?? 0))
-      .map((t) => ({ id: t.id, title: t.title, remaining: fx.toBase(t.agreed! - (t.paid ?? 0), t.currency), doneAt: t.doneAt! })),
+    doneUnpaid: tasks.filter((t) => t.status === "done" && t.doneAt && t.agreed && taskDue(t) > (t.paid ?? 0))
+      .map((t) => ({ id: t.id, title: t.title, remaining: fx.toBase(taskDue(t) - (t.paid ?? 0), t.currency), doneAt: t.doneAt! })),
     meetings,
     waiting: waitingList(waits.filter((w) => w.kind !== "delivery"), today).filter((w) => w.days >= WAIT_DAYS)
       .map((w) => ({ key: w.kind + w.id, label: w.kind === "contract" ? "الاتفاق" : "عرض السعر", title: w.title, client: w.client, days: w.days })),

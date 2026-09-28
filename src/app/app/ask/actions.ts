@@ -28,7 +28,7 @@ export async function askNotebook(question: string): Promise<AskResult> {
     loadFx(uid),
     prisma.clientInfo.findMany({ where: { userId: uid }, select: { name: true }, take: 300 }),
     prisma.entry.findMany({ where: { userId: uid }, select: { kind: true, name: true, client: true, amount: true, date: true, startMonth: true, endMonth: true, category: true } }),
-    prisma.task.findMany({ where: { userId: uid }, select: { id: true, title: true, client: true, agreed: true, paid: true, currency: true, status: true, due: true, doneAt: true, timeSpent: true, timerStart: true } }),
+    prisma.task.findMany({ where: { userId: uid }, select: { id: true, title: true, client: true, agreed: true, paid: true, discount: true, taxRate: true, currency: true, status: true, due: true, doneAt: true, timeSpent: true, timerStart: true } }),
     prisma.meeting.findMany({ where: { userId: uid, at: { gte: new Date(today.getFullYear() - 1, 0, 1) } }, select: { title: true, client: true, at: true } }),
     prisma.lead.findMany({ where: { userId: uid }, select: { name: true, need: true, status: true, nextAt: true }, orderBy: { nextAt: { sort: "asc", nulls: "last" } } }),
   ]);

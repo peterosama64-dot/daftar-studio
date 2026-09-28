@@ -24,7 +24,7 @@ export default async function Money({ searchParams }: { searchParams: SP }) {
   const [{ entries, totals: t, cur }, fx, owedTasks, budgetRow] = await Promise.all([
     loadMonth(month, uid),
     loadFx(uid),
-    prisma.task.findMany({ where: { userId: uid, agreed: { gt: 0 } }, select: { id: true, title: true, client: true, agreed: true, paid: true, currency: true } }),
+    prisma.task.findMany({ where: { userId: uid, agreed: { gt: 0 } }, select: { id: true, title: true, client: true, agreed: true, paid: true, discount: true, taxRate: true, currency: true } }),
     userRow(uid),
   ]);
   const budgets = parseBudgets(budgetRow?.budgets);
@@ -72,7 +72,9 @@ export default async function Money({ searchParams }: { searchParams: SP }) {
 
   return (
     <>
-      <PageHead title="الفلوس" base="/app/money" month={month} sub={`كل المبالغ بالـ${cur.short}`} />
+      <PageHead title="الفلوس" base="/app/money" month={month} sub={`كل المبالغ بالـ${cur.short}`}>
+        <Link href="/app/invoices" className="text-sm text-cyan">سجل الفواتير ‹</Link>
+      </PageHead>
       <MoneyStrip I={t.I} S={t.S} X={t.X} net={t.net} cur={cur.short} />
       {owed.total > 0 && (
         <Card className="p-5" aria-labelledby="owed-h">
