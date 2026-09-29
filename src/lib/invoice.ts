@@ -1,4 +1,5 @@
 import { monthKey } from "./dates";
+import { readItems, type QuoteItem } from "./quote";
 
 /** The old per-task number, kept for invoices that were shared before sequential numbers existed. */
 export function invoiceNumber(t: { id: string; createdAt: Date }): string {
@@ -35,3 +36,12 @@ export const taskDue = (t: { agreed: number | null; discount?: number | null; ta
 
 /** A file name that works on every OS: Arabic letters kept, anything else odd becomes "-". */
 export const safeFileName = (s: string) => s.replace(/[\\/:*?"<>|\s]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
+
+/** The lines printed on an invoice: the saved line items, or the whole job as one line. */
+export function invoiceLines(t: { title: string; agreed: number | null; items?: unknown }): QuoteItem[] {
+  const rows = readItems(t.items);
+  return rows.length ? rows : [{ desc: t.title, amount: Math.max(0, t.agreed ?? 0) }];
+}
+
+/** Line items only count when they add up to something; the price stays their sum. */
+export const linesTotal = (rows: QuoteItem[]) => Math.round(rows.reduce((s, x) => s + x.amount, 0) * 100) / 100;

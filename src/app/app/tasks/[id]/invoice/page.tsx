@@ -5,8 +5,9 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { loadFx } from "@/lib/data";
 import { now } from "@/lib/dates";
-import { formatInvoiceNo, invoiceTotals, safeFileName, shownInvoiceNo } from "@/lib/invoice";
+import { formatInvoiceNo, invoiceLines, invoiceTotals, safeFileName, shownInvoiceNo } from "@/lib/invoice";
 import { Button, Card, btnClass, inputClass } from "@/components/ui";
+import { InvoiceLines } from "@/components/invoice-lines";
 import { PrintButton } from "@/components/print-button";
 import { InvoiceDoc } from "@/components/docs";
 import { ShareBox } from "@/components/share-box";
@@ -69,9 +70,10 @@ export default async function Invoice({ params }: { params: Promise<{ id: string
           </label>
           <Button kind="secondary" small>احفظ</Button>
         </form>
+        <InvoiceLines taskId={t.id} initial={invoiceLines(t)} title={t.title} cur={cur.short(t.currency)} />
         <p className="text-xs text-muted">الخصم والضريبة بيغيّروا المبلغ المستحق على العميل في كل حتة في الدفتر (الفلوس، العملاء، التذكير).{!t.taxRate && user?.taxRate ? ` نسبة ${user.taxRate}% مكتوبة من الإعدادات، دوس «احفظ» عشان تتطبق.` : ""}</p>
       </Card>
-      <InvoiceDoc no={no} draft={draft} issued={t.invoicedAt ?? now()} from={user ?? noParty} client={t.client} title={t.title} {...totals} cur={cur.short(t.currency)} />
+      <InvoiceDoc no={no} draft={draft} issued={t.invoicedAt ?? now()} from={user ?? noParty} client={t.client} title={t.title} lines={invoiceLines(t)} {...totals} cur={cur.short(t.currency)} />
     </>
   );
 }

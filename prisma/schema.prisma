@@ -35,6 +35,7 @@ model User {
   autoBackup     Boolean            @default(true) // keep a weekly copy of the notebook (AutoBackup)
   lastAutoBackup String? // "YYYY-MM-DD" of the last weekly copy
   autoBackups    AutoBackup[]
+  clientInvoices ClientInvoice[]
   incomeGoal     Float? // monthly income target, shown on the home page
   suspendedAt    DateTime? // set by an admin: can't sign in, no reminders, shared links stop working
   lastSeenAt     DateTime? // updated at most hourly, for the admin's activity numbers
@@ -58,28 +59,28 @@ model User {
 }
 
 model Task {
-  id               String        @id @default(cuid())
+  id               String         @id @default(cuid())
   userId           String
-  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   title            String
-  client           String        @default("")
+  client           String         @default("")
   due              DateTime?
-  priority         String        @default("normal") // high | normal | low
-  status           String        @default("todo") // todo | doing | done
-  source           String        @default("manual") // manual | voice | gmail | chat
-  notes            String        @default("")
+  priority         String         @default("normal") // high | normal | low
+  status           String         @default("todo") // todo | doing | done
+  source           String         @default("manual") // manual | voice | gmail | chat
+  notes            String         @default("")
   agreed           Float?
   paid             Float?
   doneAt           DateTime?
-  timeSpent        Int           @default(0) // seconds tracked with the timer
+  timeSpent        Int            @default(0) // seconds tracked with the timer
   timerStart       DateTime? // set while the timer runs
-  shareToken       String?       @unique // public invoice link
+  shareToken       String?        @unique // public invoice link
   recurringId      String? // made by a RecurringJob
-  reviewToken      String?       @unique // public link where the client reviews the delivered files
+  reviewToken      String?        @unique // public link where the client reviews the delivered files
   revisionsAllowed Int? // revisions included in the price; more are extra
   approvedAt       DateTime? // client approved the delivered work
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
   deliveries       Delivery[]
   revisions        Revision[]
   subtasks         Subtask[]
@@ -89,7 +90,7 @@ model Task {
   rating           Int? // 1–5 from the client, after approving the work
   ratingNote       String?
   ratedAt          DateTime?
-  showcase         Boolean       @default(false) // the owner chose to show this review on the public reviews page
+  showcase         Boolean        @default(false) // the owner chose to show this review on the public reviews page
   planDay          DateTime? // the day of the week plan this job is placed on (local midnight)
   estimate         Int? // estimated minutes of work, for the week plan
   nudgedAt         DateTime? // last follow-up sent to the client about delivered work awaiting their reply
@@ -97,6 +98,9 @@ model Task {
   invoicedAt       DateTime? // issue date printed on the invoice
   discount         Float? // taken off the agreed price, in the task's currency
   taxRate          Float? // VAT % added after the discount (e.g. 14, 5, 15)
+  items            Json? // invoice line items [{ desc, amount }]; when set, agreed is their sum
+  groupInvoiceId   String? // billed on a combined invoice (ClientInvoice) instead of its own
+  groupInvoice     ClientInvoice? @relation(fields: [groupInvoiceId], references: [id], onDelete: SetNull)
 
   @@unique([userId, invoiceNo])
   @@index([userId, status])
@@ -353,4 +357,23 @@ model AutoBackup {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+// One invoice for several jobs of the same client. It takes a number from the same yearly counter as single
+// invoices. Payments stay on each job; the invoice adds them up. Cancelling frees the jobs, and the number
+// stays in the log as cancelled (numbers are never reused).
+model ClientInvoice {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client      String
+  invoiceNo   String
+  issuedAt    DateTime
+  shareToken  String?   @unique
+  cancelledAt DateTime?
+  createdAt   DateTime  @default(now())
+  tasks       Task[]
+
+  @@unique([userId, invoiceNo])
+  @@index([userId, issuedAt])
 }

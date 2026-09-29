@@ -59,10 +59,29 @@ function Footer({ line }: { line: string }) {
   );
 }
 
-export function InvoiceDoc({ no, issued, draft, from, client, title, subtotal, discount, taxRate, tax, total, paid, remaining, cur }: {
-  no: string; issued: Date; draft?: boolean; from: Party; client: string; title: string;
+export function InvoiceDoc({ no, issued, draft, from, client, title, lines, parts, subtotal, discount, taxRate, tax, total, paid, remaining, cur }: {
+  no: string; issued: Date; draft?: boolean; from: Party; client: string; title?: string;
+  /** One job's line items. */
+  lines?: QuoteItem[];
+  /** A combined invoice: a section per job. */
+  parts?: { id: string; title: string; lines: QuoteItem[]; m: { subtotal: number; discount: number; taxRate: number; tax: number; total: number } }[];
   subtotal: number; discount: number; taxRate: number; tax: number; total: number; paid: number; remaining: number; cur: string;
 }) {
+  const money = (v: number) => `${fmt(v)} ${cur}`;
+  const table = (rows: QuoteItem[]) => (
+    <table className="w-full border-collapse text-[0.9375rem]">
+      <thead>
+        <tr className="border-b border-ink text-right text-sm text-muted"><th className="py-2 font-medium">البيان</th><th className="w-40 py-2 text-left font-medium">المبلغ</th></tr>
+      </thead>
+      <tbody>
+        {rows.map((x, i) => (
+          <tr key={i} className="border-b border-rule">
+            <td className="py-3 [overflow-wrap:anywhere]">{x.desc}</td><td className="num py-3 text-left">{money(x.amount)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
   const row = (k: string, v: number, strong = false) => (
     <div className={`flex justify-between py-1.5 ${strong ? "border-t-2 border-ink pt-2.5 font-bold" : ""}`}>
       <span className={strong ? "" : "text-muted"}>{k}</span><span className="num">{v < 0 ? "−" : ""}{fmt(Math.abs(v))} {cur}</span>
@@ -75,14 +94,21 @@ export function InvoiceDoc({ no, issued, draft, from, client, title, subtotal, d
         <div className="grid gap-1 text-sm sm:text-left"><span className="text-muted">تاريخ الإصدار</span><span className="font-semibold">{longDate(issued)}</span></div>
       </header>
       <Parties from={from} to={client} />
-      <table className="w-full border-collapse text-[0.9375rem]">
-        <thead>
-          <tr className="border-b border-ink text-right text-sm text-muted"><th className="py-2 font-medium">البيان</th><th className="w-40 py-2 text-left font-medium">المبلغ</th></tr>
-        </thead>
-        <tbody>
-          <tr className="border-b border-rule"><td className="py-3 font-semibold">{title}</td><td className="num py-3 text-left">{fmt(subtotal)} {cur}</td></tr>
-        </tbody>
-      </table>
+      {parts ? (
+        <div className="grid gap-5">
+          {parts.map((p) => (
+            <section key={p.id} className="grid gap-1.5">
+              <h2 className="font-display text-lg font-bold [overflow-wrap:anywhere]">{p.title}</h2>
+              {table(p.lines)}
+              <div className="flex flex-wrap justify-end gap-x-4 text-sm text-muted">
+                {p.m.discount > 0 && <span>خصم <span className="num">{money(p.m.discount)}</span></span>}
+                {p.m.tax > 0 && <span>ضريبة {p.m.taxRate}% <span className="num">{money(p.m.tax)}</span></span>}
+                <span className="font-semibold text-ink">المجموع <span className="num">{money(p.m.total)}</span></span>
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : table(lines ?? [{ desc: title ?? "", amount: subtotal }])}
       <div className="grid w-full gap-0.5 text-[0.9375rem] sm:mr-auto sm:max-w-xs print:mr-auto print:max-w-xs">
         {(discount > 0 || tax > 0) && row("المجموع", subtotal)}
         {discount > 0 && row("الخصم", -discount)}
