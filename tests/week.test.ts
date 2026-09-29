@@ -125,3 +125,65 @@ describe("invoices", () => {
     expect(o.total).toBe(1400);
   });
 });
+
+import { clientProfit, profitVerdict } from "../src/lib/client-profit";
+import { groupParts, groupTotals } from "../src/lib/group-invoice";
+import { invoiceLines, linesTotal } from "../src/lib/invoice";
+
+describe("invoice lines", () => {
+  it("falls back to the job itself when there are no line items", () => {
+    expect(invoiceLines({ title: "لوجو", agreed: 5000, items: null })).toEqual([{ desc: "لوجو", amount: 5000 }]);
+    expect(invoiceLines({ title: "لوجو", agreed: 5000, items: [{ desc: "تصميم", amount: 3000 }, { desc: "كروت", amount: 2000 }] }))
+      .toEqual([{ desc: "تصميم", amount: 3000 }, { desc: "كروت", amount: 2000 }]);
+    expect(linesTotal([{ desc: "a", amount: 3000.005 }, { desc: "b", amount: 2000 }])).toBe(5000.01);
+  });
+});
+
+describe("combined invoice", () => {
+  const t = (id: string, agreed: number, paid: number, discount: number | null, taxRate: number | null) =>
+    ({ id, title: id, agreed, paid, discount, taxRate });
+  it("adds up each job's own discount and VAT", () => {
+    const parts = groupParts([t("a", 10000, 2000, 1000, 14), t("b", 5000, 0, null, 14)]);
+    expect(parts[0].m.total).toBe(10260);
+    expect(groupTotals(parts)).toMatchObject({ subtotal: 15000, discount: 1000, tax: 1960, total: 15960, paid: 2000, remaining: 13960, taxRate: 14 });
+  });
+  it("prints no single rate when the jobs differ", () => {
+    expect(groupTotals(groupParts([t("a", 1000, 0, null, 14), t("b", 1000, 0, null, 5)])).taxRate).toBe(0);
+  });
+});
+
+describe("which client pays best", () => {
+  const today = new Date(2026, 8, 28);
+  const at = new Date(2026, 8, 28, 12);
+  const T = (o: Partial<Parameters<typeof clientProfit>[0][number]>) =>
+    ({ id: "t", client: "نون", agreed: null, paid: null, status: "todo", doneAt: null, timeSpent: 0, timerStart: null, revisions: 0, allowed: null, ...o });
+  it("ranks by the hourly rate after extra revisions and waiting for the money", () => {
+    const rows = clientProfit(
+      [
+        T({ id: "a", client: "نون", agreed: 10000, paid: 10000, timeSpent: 10 * 3600, revisions: 2, allowed: 3 }),
+        T({ id: "b", client: "سكر", agreed: 10000, paid: 0, status: "done", doneAt: new Date(2026, 7, 1), timeSpent: 10 * 3600, revisions: 9, allowed: 2 }),
+      ],
+      [{ client: "نون", name: "دفعة", amount: 10000, date: today }, { client: "سكر", name: "دفعة", amount: 10000, date: today }],
+      today, at,
+    );
+    expect(rows.map((r) => r.name)).toEqual(["نون", "سكر"]);
+    expect(rows[0]).toMatchObject({ rate: 1000, hours: 10, extraRevisions: 0, owed: 0, waitDays: null });
+    expect(rows[1]).toMatchObject({ rate: 1000, extraRevisions: 7, owed: 10000, waitDays: 58 });
+    // VAT and discount count in what is owed: (10000 - 1000) + 14% = 10260, of which 10000 is paid.
+    expect(clientProfit([T({ client: "نون", agreed: 10000, paid: 10000, discount: 1000, taxRate: 14 })], [], today, at)[0].owed).toBe(260);
+    expect(rows[1].score).toBeLessThan(rows[0].score);
+  });
+  it("leaves the rate empty without a timer, and groups nameless work", () => {
+    const rows = clientProfit([T({ client: "", agreed: 500, paid: 500 })], [{ client: "", name: "كاش", amount: 500, date: today }], today, at);
+    expect(rows[0]).toMatchObject({ name: "من غير اسم عميل", rate: null, income: 500 });
+  });
+  it("says in one line who is best and who costs most", () => {
+    const rows = clientProfit(
+      [T({ id: "a", client: "نون", agreed: 6000, paid: 6000, timeSpent: 3 * 3600 }), T({ id: "b", client: "سكر", agreed: 2000, paid: 2000, timeSpent: 10 * 3600, revisions: 5, allowed: 1 })],
+      [{ client: "نون", name: "x", amount: 6000, date: today }, { client: "سكر", name: "x", amount: 2000, date: today }],
+      today, at,
+    );
+    expect(profitVerdict(rows, (n) => `${n} ج.م`)).toBe("ساعتك مع نون بتجيب 2000 ج.م، ومع سكر 200 ج.م — بسبب تعديلات زيادة عن المتفق عليه.");
+    expect(profitVerdict([rows[0]], String)).toBeNull();
+  });
+});

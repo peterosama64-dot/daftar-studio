@@ -12,9 +12,10 @@ import { monthKey, parseDay, parseDayTime, isMonthKey, now } from "@/lib/dates";
 import { ParsedSchema } from "@/lib/parsed";
 import { runRecurring } from "@/lib/recurring";
 import { parseItems } from "@/lib/quote";
+import { Prisma } from "@prisma/client";
 import { acceptQuoteFor, newToken } from "@/lib/share";
 import { removeFile } from "@/lib/files";
-import { whatsappLink } from "@/lib/contact";
+import { clientHref, whatsappLink } from "@/lib/contact";
 import { loadFx } from "@/lib/data";
 import { pickCurrency, type Fx } from "@/lib/fx";
 import { LEAD_STATUSES } from "@/lib/leads";
@@ -24,7 +25,7 @@ import { buildWeekly } from "@/lib/weekly";
 import { weeklyFor } from "@/lib/weekly-data";
 import { draftContract } from "@/lib/contract";
 import type { ReminderData } from "@/lib/remind";
-import { formatInvoiceNo, taskDue } from "@/lib/invoice";
+import { formatInvoiceNo, linesTotal, taskDue } from "@/lib/invoice";
 import { makeAutoBackup } from "@/lib/auto-backup";
 import { autoPlan, weekStart } from "@/lib/week";
 
@@ -995,4 +996,61 @@ export async function backupNow() {
   if (last && Date.now() - last.createdAt.getTime() < 10 * 60_000) return;
   await makeAutoBackup(userId, now());
   revalidatePath("/app/settings");
+}
+
+/** Save the invoice's line items; the job's price becomes their sum. No rows = back to one line. */
+export async function setInvoiceLines(taskId: string, f: FormData) {
+  const userId = await requireUser();
+  const rows = parseItems(f.getAll("item_desc"), f.getAll("item_amount"));
+  await prisma.task.updateMany({
+    where: { id: taskId, userId },
+    data: rows.length ? { items: rows, agreed: linesTotal(rows) } : { items: Prisma.DbNull },
+  });
+  done();
+}
+
+// ---------- one invoice for several jobs ----------
+/**
+ * Puts the client's chosen unbilled jobs on one numbered invoice. Each job is claimed (groupInvoiceId must
+ * still be null and it must have no number of its own), so a job can never sit on two invoices; if none can
+ * be claimed the invoice is rolled back and no number is spent.
+ */
+export async function createGroupInvoice(client: string, f: FormData) {
+  const userId = await requireUser();
+  const name = client.trim().slice(0, 80);
+  const ids = f.getAll("task").map((x) => String(x)).slice(0, 50);
+  if (!name || !ids.length) return;
+  const year = now().getFullYear();
+  const id = await prisma.$transaction(async (tx) => {
+    const [u] = await tx.$queryRaw<{ invoiceSeq: number; invoicePrefix: string }[]>`
+      UPDATE "User" SET "invoiceSeq" = CASE WHEN "invoiceYear" = ${year} THEN "invoiceSeq" + 1 ELSE 1 END, "invoiceYear" = ${year}
+      WHERE "id" = ${userId} RETURNING "invoiceSeq", "invoicePrefix"`;
+    const inv = await tx.clientInvoice.create({ data: { userId, client: name, invoiceNo: formatInvoiceNo(u.invoicePrefix, year, u.invoiceSeq), issuedAt: now() } });
+    const claimed = await tx.task.updateMany({ where: { id: { in: ids }, userId, client: name, groupInvoiceId: null, invoiceNo: null, agreed: { gt: 0 } }, data: { groupInvoiceId: inv.id } });
+    if (!claimed.count) throw new Error("nothing-claimed");
+    return inv.id;
+  }).catch((e) => { if (e instanceof Error && e.message === "nothing-claimed") return null; throw e; });
+  revalidatePath("/app/invoices"); revalidatePath(clientHref(name));
+  if (id) redirect(`/app/invoices/${id}`);
+}
+
+/** Cancels a combined invoice: its jobs are free to be billed again, and the number stays in the log. */
+export async function cancelGroupInvoice(id: string) {
+  const userId = await requireUser();
+  await prisma.$transaction([
+    prisma.task.updateMany({ where: { groupInvoiceId: id, userId }, data: { groupInvoiceId: null } }),
+    prisma.clientInvoice.updateMany({ where: { id, userId, cancelledAt: null }, data: { cancelledAt: now(), shareToken: null } }),
+  ]);
+  revalidatePath("/app/invoices"); revalidatePath(`/app/invoices/${id}`);
+}
+
+export async function shareGroupInvoice(id: string) {
+  const userId = await requireUser();
+  await prisma.clientInvoice.updateMany({ where: { id, userId, cancelledAt: null, shareToken: null }, data: { shareToken: newToken() } });
+  revalidatePath(`/app/invoices/${id}`);
+}
+export async function unshareGroupInvoice(id: string) {
+  const userId = await requireUser();
+  await prisma.clientInvoice.updateMany({ where: { id, userId }, data: { shareToken: null } });
+  revalidatePath(`/app/invoices/${id}`);
 }

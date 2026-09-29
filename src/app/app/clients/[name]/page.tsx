@@ -10,7 +10,7 @@ import { now, shortDate } from "@/lib/dates";
 import { quoteTotal, readItems } from "@/lib/quote";
 import { whatsappLink } from "@/lib/contact";
 import { Button, Card, Empty, Field, Pill, btnClass, inputClass } from "@/components/ui";
-import { saveClientInfo, sharePortal, unsharePortal } from "../../actions";
+import { createGroupInvoice, saveClientInfo, sharePortal, unsharePortal } from "../../actions";
 import { ShareBox } from "@/components/share-box";
 import { RemindButton } from "@/components/remind-button";
 import { rateReport } from "@/lib/rates";
@@ -43,6 +43,9 @@ export default async function ClientPage({ params }: { params: Promise<{ name: s
   const open = tasks.filter((t) => t.status !== "done");
   const rate = rateReport(tasks.map((t) => ({ ...t, agreed: t.agreed === null ? null : fx.toBase(t.agreed, t.currency) })));
   const wa = info?.phone ? whatsappLink(info.phone) : null;
+  // Priced jobs with no invoice yet: they can go on one combined invoice.
+  const billable = tasks.filter((t) => t.agreed && !t.invoiceNo && !t.groupInvoiceId);
+  const groups = await prisma.clientInvoice.findMany({ where: { userId: uid, client: name }, orderBy: { issuedAt: "desc" }, select: { id: true, invoiceNo: true, issuedAt: true, cancelledAt: true, _count: { select: { tasks: true } } } });
   const stat = (k: string, v: string, c = "") => (
     <div className="grid gap-0.5 rounded-xl border border-rule bg-sheet px-4 py-3"><span className="text-[0.8125rem] text-muted">{k}</span><span className={`num text-xl font-medium ${c}`}>{v}</span></div>
   );
@@ -92,6 +95,35 @@ export default async function ClientPage({ params }: { params: Promise<{ name: s
               })}</ul>
             ) : <Empty>مفيش شغل.</Empty>}
           </Card>
+          {(billable.length > 1 || groups.length > 0) && (
+            <Card className="p-5">
+              <h2 className="mb-1 text-lg font-bold">فاتورة واحدة لكذا شغلانة</h2>
+              <p className="mb-3 text-sm text-muted">اختار الشغلانات واعمل فاتورة واحدة بيها كلها. الدفعات بتفضل على كل شغلانة زي ما هي.</p>
+              {billable.length > 1 && (
+                <form action={createGroupInvoice.bind(null, name)} className="grid gap-2">
+                  {billable.map((t) => (
+                    <label key={t.id} className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" name="task" value={t.id} defaultChecked className="size-4 accent-[var(--cyan)]" />
+                      <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{t.title}</span>
+                      <span className="num text-muted">{fmt(taskDue(t))}{fx.of(t.currency) !== fx.base ? ` ${fx.short(t.currency)}` : ""}</span>
+                    </label>
+                  ))}
+                  <Button small className="justify-self-start">اعمل فاتورة مجمّعة</Button>
+                </form>
+              )}
+              {groups.length > 0 && (
+                <ul className="mt-3 grid gap-1 text-sm">
+                  {groups.map((g) => (
+                    <li key={g.id} className="flex flex-wrap items-center gap-2 border-t border-rule pt-2">
+                      <Link href={`/app/invoices/${g.id}`} className="num text-cyan">{g.invoiceNo}</Link>
+                      <span className="text-muted">{g._count.tasks} شغلانات · <span className="num">{shortDate(g.issuedAt)}</span></span>
+                      {g.cancelledAt && <Pill tone="waiting">ملغية</Pill>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
           <Card className="p-5">
             <h2 className="mb-2 text-lg font-bold">الفلوس اللي دخلت</h2>
             {income.length ? (
