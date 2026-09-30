@@ -1,5 +1,6 @@
 import { fmt } from "@/lib/money";
-import { goalProgress } from "@/lib/goal";
+import { goalPace, goalProgress } from "@/lib/goal";
+import Link from "next/link";
 import { setGoal } from "@/app/app/actions";
 import { Button, inputClass } from "./ui";
 
@@ -23,27 +24,28 @@ export function GoalCard({ income, goal, month, today, cur }: { income: number; 
     );
   }
   const g = goalProgress(income, goal, month, today);
+  const pace = goalPace(income, goal, month, today);
   return (
     <section aria-label="هدف الشهر" className="grid gap-2.5 rounded-2xl border border-rule bg-sheet px-5 py-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="font-display font-semibold">هدف الشهر</span>
         <span className="text-sm text-muted"><span className="num text-ink">{fmt(income)}</span> من <span className="num">{fmt(goal)}</span> {cur} · <span className="num">{g.pct}%</span></span>
       </div>
-      <div className="h-2.5 overflow-hidden rounded bg-paper" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, g.pct)} aria-label="نسبة الوصول للهدف">
+      <div className="relative h-2.5 overflow-hidden rounded bg-paper" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, g.pct)} aria-label="نسبة الوصول للهدف">
         <div className="h-full rounded bg-money" style={{ width: `${Math.min(100, g.pct)}%` }} />
+        {g.current && !g.reached && (
+          <i className="absolute inset-y-0 w-0.5 bg-ink" style={{ insetInlineStart: `${Math.min(100, Math.round((pace.expected / goal) * 100))}%` }} aria-hidden="true" />
+        )}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <p className={g.reached ? "font-semibold text-money" : "text-ink2"}>
           {g.reached
             ? `وصلت للهدف${income > goal ? ` وعدّيته بـ ${fmt(income - goal)} ${cur}` : ""}.`
             : g.current
-              ? `فاضل ${fmt(g.left)} ${cur}، يعني حوالي ${fmt(g.perDay)} في اليوم لآخر الشهر (${g.daysLeft === 1 ? "النهارده آخر يوم" : g.daysLeft === 2 ? "باقي يومين" : `باقي ${g.daysLeft} ${g.daysLeft <= 10 ? "أيام" : "يوم"}`}).`
+              ? `${pace.ahead ? `إنت قدام الهدف بـ ${fmt(pace.diff)} ${cur}` : `إنت وراه بـ ${fmt(-pace.diff)} ${cur}`} · فاضل ${fmt(g.left)} ${cur}، حوالي ${fmt(g.perDay)} في اليوم (${g.daysLeft === 1 ? "النهارده آخر يوم" : g.daysLeft === 2 ? "باقي يومين" : `باقي ${g.daysLeft} ${g.daysLeft <= 10 ? "أيام" : "يوم"}`}).`
               : `ما وصلتش للهدف الشهر ده، كان فاضل ${fmt(g.left)} ${cur}.`}
         </p>
-        <details className="text-sm">
-          <summary className="cursor-pointer text-muted hover:text-ink">غيّر الهدف</summary>
-          <div className="mt-2">{form("احفظ")}</div>
-        </details>
+        <Link href="/app/goal" className="text-sm text-cyan">إزاي توصله ‹</Link>
       </div>
     </section>
   );

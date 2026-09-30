@@ -8,6 +8,7 @@ import { makeFx, parseRates } from "@/lib/fx";
 import { CURRENCIES } from "@/lib/constants";
 import { pushToUser } from "@/lib/push";
 import { runRecurring } from "@/lib/recurring";
+import { autoInvoice } from "@/lib/invoice-issue";
 import { mailConfigured, sendMail } from "@/lib/mail";
 import { buildWeekly } from "@/lib/weekly";
 import { weeklyFor } from "@/lib/weekly-data";
@@ -27,7 +28,7 @@ export async function GET(req: Request) {
   const today = now();
   const key = dayKey(today);
   // Monthly jobs first, for every user (not only those with notifications), so today's digest sees them.
-  const recurring = await runRecurring(prisma, today);
+  const recurring = await runRecurring(prisma, today, undefined, autoInvoice);
   const tomorrowEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2);
   const users = await prisma.user.findMany({
     where: { push: { some: {} }, suspendedAt: null, OR: [{ lastDigest: null }, { lastDigest: { not: key } }] },

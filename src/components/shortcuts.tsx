@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 const GO: Record<string, [string, string]> = {
   KeyH: ["/app", "الرئيسية"], KeyT: ["/app/tasks", "الشغل"], KeyM: ["/app/money", "الفلوس"], KeyC: ["/app/clients", "العملاء"],
   KeyL: ["/app/leads", "عملاء محتملين"], KeyQ: ["/app/quotes", "عروض الأسعار"], KeyR: ["/app/report", "التقرير"], KeyS: ["/app/settings", "الإعدادات"],
-  KeyA: ["/app/meetings", "المواعيد"], KeyK: ["/app/ask", "اسأل دفترك"], KeyW: ["/app/week", "خطة الأسبوع"],
+  KeyA: ["/app/meetings", "المواعيد"], KeyK: ["/app/ask", "اسأل دفترك"], KeyW: ["/app/week", "خطة الأسبوع"], KeyD: ["/app/goal", "هدف الشهر"],
 };
 const letter = (code: string) => code.replace("Key", "");
 

@@ -11,6 +11,7 @@ import { CURRENCIES, PRIORITIES, SOURCES, STATUSES } from "@/lib/constants";
 import { monthKey, parseDay, parseDayTime, isMonthKey, now } from "@/lib/dates";
 import { ParsedSchema } from "@/lib/parsed";
 import { runRecurring } from "@/lib/recurring";
+import { autoInvoice, issueTaskNo } from "@/lib/invoice-issue";
 import { parseItems } from "@/lib/quote";
 import { Prisma } from "@prisma/client";
 import { acceptQuoteFor, newToken } from "@/lib/share";
@@ -324,7 +325,7 @@ export async function unshareQuote(id: string) {
 }
 export async function shareInvoice(id: string) {
   const userId = await requireUser();
-  await issueNo(userId, id);
+  await issueTaskNo(userId, id);
   await prisma.task.updateMany({ where: { id, userId, shareToken: null }, data: { shareToken: newToken() } });
   revalidatePath(`/app/tasks/${id}/invoice`);
 }
@@ -347,8 +348,10 @@ export async function addRecurring(f: FormData) {
   const title = str(f, "title"), amount = num(f, "amount");
   if (!title || !amount) return;
   const day = Math.min(31, Math.max(1, Math.round(num(f, "day") ?? 1)));
-  await prisma.recurringJob.create({ data: { userId, title, client: str(f, "client", 80), amount, dayOfMonth: day } });
-  await runRecurring(prisma, now(), userId); // this month's task right away
+  await prisma.recurringJob.create({
+    data: { userId, title, client: str(f, "client", 80), amount, dayOfMonth: day, autoInvoice: !!f.get("autoInvoice"), clientEmail: str(f, "clientEmail", 120).toLowerCase() },
+  });
+  await runRecurring(prisma, now(), userId, autoInvoice); // this month's task (and its invoice) right away
   done();
 }
 
@@ -357,7 +360,17 @@ export async function toggleRecurring(id: string) {
   const j = await prisma.recurringJob.findFirst({ where: { id, userId } });
   if (!j) return;
   await prisma.recurringJob.updateMany({ where: { id, userId }, data: { active: !j.active } });
-  if (!j.active) await runRecurring(prisma, now(), userId);
+  if (!j.active) await runRecurring(prisma, now(), userId, autoInvoice);
+  done();
+}
+
+/** «اعمل الفاتورة كمان» and the client's email for a monthly package. */
+export async function setRecurringInvoice(id: string, f: FormData) {
+  const userId = await requireUser();
+  await prisma.recurringJob.updateMany({
+    where: { id, userId },
+    data: { autoInvoice: !!f.get("autoInvoice"), clientEmail: str(f, "clientEmail", 120).toLowerCase() },
+  });
   done();
 }
 
@@ -500,7 +513,7 @@ export async function prepareReminder(client: string): Promise<ReminderData | nu
   const tasks = owing.filter((t) => taskDue(t) > (t.paid ?? 0));
   if (!tasks.length) return null;
   // Only fills a missing token, so a link the client already has keeps working.
-  for (const t of tasks.filter((x) => !x.shareToken)) await issueNo(userId, t.id);
+  for (const t of tasks.filter((x) => !x.shareToken)) await issueTaskNo(userId, t.id);
   await Promise.all(tasks.filter((t) => !t.shareToken).map((t) =>
     prisma.task.updateMany({ where: { id: t.id, userId, shareToken: null }, data: { shareToken: newToken() } })));
   const [fresh, user, info, fx] = await Promise.all([
@@ -937,32 +950,10 @@ export async function unshareCalendar() {
 }
 
 // ---------- invoices ----------
-/**
- * Gives a task's invoice the next number of the year (INV-2026-001), once. The user row is locked by the
- * counter update, and the task only takes a number if it has none, so two taps (or two tabs) never produce
- * two numbers or a gap: the loser's transaction rolls back, counter included.
- */
-async function issueNo(userId: string, taskId: string) {
-  const year = now().getFullYear();
-  try {
-    await prisma.$transaction(async (tx) => {
-      const t = await tx.task.findFirst({ where: { id: taskId, userId }, select: { invoiceNo: true, agreed: true } });
-      if (!t || t.invoiceNo || !t.agreed) return;
-      const [u] = await tx.$queryRaw<{ invoiceSeq: number; invoicePrefix: string }[]>`
-        UPDATE "User" SET "invoiceSeq" = CASE WHEN "invoiceYear" = ${year} THEN "invoiceSeq" + 1 ELSE 1 END, "invoiceYear" = ${year}
-        WHERE "id" = ${userId} RETURNING "invoiceSeq", "invoicePrefix"`;
-      const got = await tx.task.updateMany({ where: { id: taskId, userId, invoiceNo: null }, data: { invoiceNo: formatInvoiceNo(u.invoicePrefix, year, u.invoiceSeq), invoicedAt: now() } });
-      if (!got.count) throw new Error("already-issued");
-    });
-  } catch (e) {
-    if (!(e instanceof Error && e.message === "already-issued")) throw e;
-  }
-}
-
 /** «اعتمد الفاتورة»: gives it its number and date. */
 export async function issueInvoice(taskId: string) {
   const userId = await requireUser();
-  await issueNo(userId, taskId);
+  await issueTaskNo(userId, taskId);
   revalidatePath(`/app/tasks/${taskId}/invoice`); revalidatePath("/app/invoices");
 }
 

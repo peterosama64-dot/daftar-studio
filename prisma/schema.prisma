@@ -179,16 +179,19 @@ model Quote {
 
 // A monthly retainer (e.g. social media for a café): each month it becomes a task with this amount.
 model RecurringJob {
-  id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title      String
-  client     String   @default("")
-  amount     Float
-  dayOfMonth Int      @default(1) // due day; months shorter than this use their last day
-  active     Boolean  @default(true)
-  lastMonth  String? // "YYYY-MM" of the last task made, so a month is never made twice
-  createdAt  DateTime @default(now())
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  client      String   @default("")
+  amount      Float
+  dayOfMonth  Int      @default(1) // due day; months shorter than this use their last day
+  active      Boolean  @default(true)
+  lastMonth   String? // "YYYY-MM" of the last task made, so a month is never made twice
+  autoInvoice Boolean  @default(false) // give the month's job an invoice number and a client link right away
+  clientEmail String   @default("") // the invoice link is emailed here when mail is set up
+  lastInvoice String? // "YYYY-MM" of the last invoice emailed, so a month is never emailed twice
+  createdAt   DateTime @default(now())
 
   @@index([userId])
 }

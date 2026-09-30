@@ -180,7 +180,7 @@ describe("quotes", () => {
   });
 });
 
-import { goalProgress } from "../src/lib/goal";
+import { goalAdvice, goalGap, goalPace, goalProgress } from "../src/lib/goal";
 describe("income goal", () => {
   const today = new Date(2026, 8, 26); // 26 Sep: 5 days left including today
   it("says how much is left per day this month", () => {
@@ -189,6 +189,35 @@ describe("income goal", () => {
   it("reports reached, and past months without per-day advice", () => {
     expect(goalProgress(16000, 15000, "2026-09", today)).toMatchObject({ pct: 107, left: 0, reached: true, perDay: 0 });
     expect(goalProgress(9000, 15000, "2026-08", today)).toMatchObject({ reached: false, current: false, daysLeft: 0, perDay: 0, left: 6000 });
+  });
+  it("compares you to the pace the goal needs", () => {
+    // 26 of 30 days gone: the goal says 13,000 by tonight.
+    expect(goalPace(10000, 15000, "2026-09", today)).toEqual({ expected: 13000, diff: -3000, ahead: false, day: 26, lastDay: 30 });
+    expect(goalPace(14000, 15000, "2026-09", today)).toMatchObject({ diff: 1000, ahead: true });
+  });
+  it("closes the gap with what is in the notebook, biggest first, and never over-counts", () => {
+    const g = goalGap({ income: 10000, goal: 15000, owed: 3000, open: 4000, quotes: 9000 });
+    expect(g.gap).toBe(5000);
+    expect(g.sources.map((s) => [s.key, s.used])).toEqual([["owed", 3000], ["open", 2000], ["quotes", 0]]);
+    expect(g).toMatchObject({ covered: 5000, short: 0, enough: true });
+  });
+  it("says how much new work is still missing", () => {
+    const g = goalGap({ income: 2000, goal: 15000, owed: 1000, open: 0, quotes: 0 });
+    expect(g).toMatchObject({ gap: 13000, covered: 1000, short: 12000, enough: false });
+    expect(goalAdvice(g, (n) => `${n}`)).toContain("12000");
+    expect(goalAdvice(goalGap({ income: 20000, goal: 15000, owed: 0, open: 0, quotes: 0 }), (n) => `${n}`)).toContain("وصلت للهدف");
+    expect(goalAdvice(goalGap({ income: 0, goal: 5000, owed: 0, open: 0, quotes: 0 }), (n) => `${n}`)).toContain("شغل جديد");
+  });
+});
+
+import { recurringMail } from "../src/lib/invoice-mail";
+describe("monthly invoice email", () => {
+  it("names the month, the number and the amount, and links the invoice", () => {
+    const m = recurringMail({ sender: "استوديو نون", title: "سوشيال", month: "2026-10", amount: 4000, cur: "ج.م", invoiceNo: "INV-2026-007", link: "https://x.test/s/i/tok" });
+    expect(m.subject).toBe("فاتورة أكتوبر 2026 رقم INV-2026-007 — سوشيال");
+    expect(m.text).toContain("4,000 ج.م");
+    expect(m.text).toContain("https://x.test/s/i/tok");
+    expect(m.html).toContain("استوديو نون");
   });
 });
 
@@ -214,7 +243,7 @@ describe("monthly jobs", () => {
     expect(recurringTitle("سوشيال", "2026-10")).toBe("سوشيال · أكتوبر 2026");
   });
   it("makes one task per job per month, even when run twice", async () => {
-    const jobs = [{ id: "j1", userId: "u", title: "سوشيال", client: "نون", amount: 4000, dayOfMonth: 25, active: true, lastMonth: null as string | null }];
+    const jobs = [{ id: "j1", userId: "u", title: "سوشيال", client: "نون", amount: 4000, dayOfMonth: 25, active: true, lastMonth: null as string | null, autoInvoice: true, clientEmail: "a@b.c" }];
     const tasks: Record<string, unknown>[] = [];
     const pick = (w: any) => jobs.filter((j) => (!w.id || j.id === w.id) && (w.active === undefined || j.active === w.active) && j.lastMonth !== w.OR[1].lastMonth.not);
     const db = {
@@ -222,11 +251,14 @@ describe("monthly jobs", () => {
         findMany: async ({ where }: any) => pick(where),
         updateMany: async ({ where, data }: any) => { const m = pick(where); m.forEach((j) => (j.lastMonth = data.lastMonth)); return { count: m.length }; },
       },
-      task: { create: async ({ data }: any) => { tasks.push(data); return data; } },
+      task: { create: async ({ data }: any) => { tasks.push(data); return { ...data, id: `t${tasks.length}` }; } },
     };
+    const invoiced: string[] = [];
+    const hook = async (j: any, taskId: string, month: string) => { invoiced.push(`${j.id}:${taskId}:${month}`); };
     const today = new Date(2026, 9, 1);
-    expect(await runRecurring(db, today)).toBe(1);
-    expect(await runRecurring(db, today)).toBe(0);
+    expect(await runRecurring(db, today, undefined, hook)).toBe(1);
+    expect(await runRecurring(db, today, undefined, hook)).toBe(0);
+    expect(invoiced).toEqual(["j1:t1:2026-10"]); // the invoice hook runs once per job per month
     expect(tasks).toHaveLength(1);
     expect(tasks[0]).toMatchObject({ title: "سوشيال · أكتوبر 2026", client: "نون", agreed: 4000, recurringId: "j1" });
     expect((tasks[0].due as Date).getDate()).toBe(25);

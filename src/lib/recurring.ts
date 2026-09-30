@@ -9,19 +9,22 @@ export function recurringDue(month: string, dayOfMonth: number): Date {
 
 export const recurringTitle = (title: string, month: string) => `${title} · ${monthName(month)}`;
 
+export type RecurringRow = { id: string; userId: string; title: string; client: string; amount: number; dayOfMonth: number; autoInvoice: boolean; clientEmail: string };
+
 type Db = {
   recurringJob: {
-    findMany: (a: { where: object }) => Promise<{ id: string; userId: string; title: string; client: string; amount: number; dayOfMonth: number }[]>;
+    findMany: (a: { where: object }) => Promise<RecurringRow[]>;
     updateMany: (a: { where: object; data: object }) => Promise<{ count: number }>;
   };
-  task: { create: (a: { data: { userId: string; title: string; client: string; agreed: number; due: Date; recurringId: string } }) => Promise<unknown> };
+  task: { create: (a: { data: { userId: string; title: string; client: string; agreed: number; due: Date; recurringId: string } }) => Promise<{ id: string }> };
 };
 
 /**
  * Make this month's task for every active monthly job that doesn't have one yet (optionally for one user).
  * Each job is claimed for the month with a conditional update first, so overlapping runs never double up.
+ * `onTask` runs on each new task — that's where the invoice is issued for jobs that ask for one.
  */
-export async function runRecurring(db: Db, today: Date, userId?: string): Promise<number> {
+export async function runRecurring(db: Db, today: Date, userId?: string, onTask?: (job: RecurringRow, taskId: string, month: string) => Promise<unknown>): Promise<number> {
   const month = monthKey(today);
   const notThisMonth = { OR: [{ lastMonth: null }, { lastMonth: { not: month } }] };
   const jobs = await db.recurringJob.findMany({ where: { active: true, user: { suspendedAt: null }, ...notThisMonth, ...(userId ? { userId } : {}) } });
@@ -29,9 +32,10 @@ export async function runRecurring(db: Db, today: Date, userId?: string): Promis
   for (const j of jobs) {
     const claimed = await db.recurringJob.updateMany({ where: { id: j.id, ...notThisMonth }, data: { lastMonth: month } });
     if (!claimed.count) continue;
-    await db.task.create({
+    const task = await db.task.create({
       data: { userId: j.userId, title: recurringTitle(j.title, month), client: j.client, agreed: j.amount, due: recurringDue(month, j.dayOfMonth), recurringId: j.id },
     });
+    if (onTask) await onTask(j, task.id, month);
     made++;
   }
   return made;

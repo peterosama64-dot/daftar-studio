@@ -172,10 +172,11 @@ describe("daily reminder job", () => {
   });
 
   it("adds what clients owe on Sundays only", async () => {
-    db.tasks.push({ userId: "u1", title: "لوجو", client: "سكر", due: null, status: "done", agreed: 3000, paid: 1000 });
     vi.useFakeTimers({ toFake: ["Date"] });
     try {
       vi.setSystemTime(new Date("2026-09-28T07:00:00Z")); // Monday in Cairo
+      db.tasks.push({ userId: "u1", title: "لوجو", client: "سكر", due: null, status: "done", agreed: 3000, paid: 1000 });
+      db.tasks.push({ userId: "u1", title: "بوستر", client: "الكرمة", due: new Date(2026, 8, 28, 12), status: "todo" }); // due on that Monday, whatever today is
       await cron(new Request("http://x/api/cron/reminders"));
       const u1 = () => JSON.parse(received.filter((r) => r.endpoint.endsWith("/push/one")).at(-1)!.payload).body;
       expect(u1()).not.toContain("ليك");
